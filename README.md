@@ -122,7 +122,7 @@ The application will integrate with the [Open Library API](https://openlibrary.o
 The goal is to allow volunteers to enter an ISBN and automatically retrieve available book metadata, such as title, authors, and publication details, reducing manual data entry.
 
 ## 🚀 Getting Started
-
+.
 Development is currently in the planning stage. These are the intended setup steps for contributors.
 
 ### 1. Clone the repository
