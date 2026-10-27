@@ -52,12 +52,12 @@ def add_new_user(member: Member):
     try:
         new_id = max((m["id"] for m in members), default=0) + 1
         hashed_password = password_hash.hash(member.password)
-        new_user = {"id":new_id, "user_name":member.user_name}
+        new_user = {"id":new_id, "user_name":member.user_name, "password":hashed_password}
         members.append(new_user)
         # Store the user on database instead
         save_users()
         print(f"✅ User '{member.user_name}' registered successfully! (201 Created)")
-        return new_user
+        return  {"id": new_id, "user_name": member.user_name, "email": member.email}
     except Exception as error:
         print(f"❌ Error registering user: {error}")
         raise
