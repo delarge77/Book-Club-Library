@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import Field, field_validator, BaseModel, EmailStr
 
 
 class Book(BaseModel):
@@ -7,3 +7,15 @@ class Book(BaseModel):
     author_name: list[str]
     first_publish_year: int | None = None
 
+
+class Member(BaseModel):
+    user_name: str = Field(min_length=5)
+    email: EmailStr
+    password: str = Field(min_length=3)
+
+    @field_validator("user_name", "password", mode="before")
+    @classmethod
+    def reject_empty_or_whitespace(cls, value):
+        if isinstance(value, str) and not value.strip():
+            raise ValueError("This field cannot be empty")
+        return value
