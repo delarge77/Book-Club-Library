@@ -17,3 +17,12 @@ def get_all_catalogued_books():
     books = cursor.fetchall()
     conn.close()
     return books
+
+
+def get_catalogued_book_by_id(book_id):
+    """Get book by book_id from db"""
+    conn = connect()
+    cursor = conn.execute("SELECT * FROM books WHERE book_id = ?", (book_id,))
+    book = cursor.fetchone()
+    conn.close()
+    return book
