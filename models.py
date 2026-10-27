@@ -1,5 +1,13 @@
 from pydantic import Field, field_validator, BaseModel, EmailStr
 
+
+class Book(BaseModel):
+    """A book with title, author name and first publish year."""
+    title: str
+    author_name: list[str]
+    first_publish_year: int | None = None
+
+
 class Member(BaseModel):
     user_name: str = Field(min_length=5)
     email: EmailStr
@@ -11,5 +19,3 @@ class Member(BaseModel):
         if isinstance(value, str) and not value.strip():
             raise ValueError("This field cannot be empty")
         return value
-
-
