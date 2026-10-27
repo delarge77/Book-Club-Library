@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException, Header, Depends
-from pydantic import BaseModel, Field, EmailStr, field_validator
 from pwdlib import PasswordHash
-
+from models import Member
 import os, json
 from dotenv import load_dotenv
 
@@ -48,24 +47,12 @@ def save_users():
         json.dump(members, fp, ensure_ascii=False, indent=4)
 
 
-class Member(BaseModel):
-    user_name: str = Field(min_length=5)
-    email: EmailStr
-    password: str = Field(min_length=3)
-
-    @field_validator("user_name", "password", mode="before")
-    @classmethod
-    def reject_empty_or_whitespace(cls, value):
-        if isinstance(value, str) and not value.strip():
-            raise ValueError("This field cannot be empty")
-        return value
-
 @app.post("/members/register", status_code=201, dependencies=[Depends(check_key)])
 def add_new_user(member: Member):
     try:
         new_id = max((m["id"] for m in members), default=0) + 1
         hashed_password = password_hash.hash(member.password)
-        new_user = {"id":new_id, "user_name":member.user_name, "email":member.email, "password": hashed_password}
+        new_user = {"id":new_id, "user_name":member.user_name, "password": hashed_password}
         members.append(new_user)
         # Store the user on database instead
         save_users()
