@@ -1,16 +1,26 @@
 import json
 import os
-
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pwdlib import PasswordHash
-
+import jwt
+from jwt.exceptions import InvalidTokenError
 from database import get_all_catalogued_books, get_catalogued_book_by_id
-from models import Member
+from models import Member, LoginRequest, TokenResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY is not configured")
+
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
+
+bearer_scheme = HTTPBearer()
 
 if not API_KEY:
     raise RuntimeError("API_KEY not found. Check your .env file.")
@@ -23,33 +33,46 @@ def check_key(x_api_key: str | None = Header(default=None)):
     if not API_KEY or x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
+def create_access_token(user_id: int) -> str:
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+    )
 
-default_members = [
-    {
-        "id": 1,
-        "user_name": "GodFather",
-        "email": "francisford@coppola.com",
-        "password": "test1234",
-    },
-    {
-        "id": 2,
-        "user_name": "Neuromancer",
-        "email": "william@gibson.com",
-        "password": "test1234",
-    },
-    {
-        "id": 3,
-        "user_name": "Hobbit",
-        "email": "jrr@tolkien.com",
-        "password": "test1234",
-    },
-    {
-        "id": 4,
-        "user_name": "Foundation",
-        "email": "isaac@asimov.com",
-        "password": "test1234",
-    },
-]
+    payload = {
+        "sub": str(user_id),
+        "exp": expires_at
+    }
+
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
+):
+    token = credentials.credentials
+
+    try:
+        payload = jwt.decode( token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+
+        if not user_id:
+            raise ValueError("Missing subject")
+
+    except (InvalidTokenError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token", headers={"WWW-Authenticate": "Bearer"})
+
+    user = next((m for m in members if str(m["id"]) == user_id), None)
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"})
+    return user
+
+
+default_members = []
 
 
 def load_members():
@@ -80,6 +103,7 @@ def add_new_user(member: Member):
         new_user = {
             "id": new_id,
             "user_name": member.user_name,
+            "email": member.email,
             "password": hashed_password,
         }
         members.append(new_user)
@@ -88,9 +112,30 @@ def add_new_user(member: Member):
         print(f"✅ User '{member.user_name}' registered successfully! (201 Created)")
         return {"id": new_id, "user_name": member.user_name, "email": member.email}
     except Exception as error:
-        print(f"❌ Error registering user: {error}")
-        raise
+        print(f"Error registering user: {error}")
+        raise HTTPException(status_code=500, detail="Could not register user")
 
+
+@app.post("/members/login", response_model=TokenResponse, status_code=201, dependencies=[Depends(check_key)])
+def login(member: LoginRequest):
+    user = next((m for m in members if m["user_name"] == member.user_name), None)
+    if user is None or not password_hash.verify(member.password, user["password"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password")
+
+    access_token = create_access_token(user["id"])
+    print("Access Token: {access_token}")
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/members/me", status_code=201)
+def get_my_profile(current_user: dict = Depends(get_current_user)):
+    return {
+        "id": current_user["id"],
+        "user_name": current_user["user_name"],
+        "email": current_user["email"]
+    }
 
 @app.get("/books")
 def list_catalogued_books():

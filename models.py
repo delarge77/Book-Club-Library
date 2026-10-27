@@ -12,4 +12,12 @@ class Member(BaseModel):
             raise ValueError("This field cannot be empty")
         return value
 
+class LoginRequest(BaseModel):
+    user_name: str
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+
 
