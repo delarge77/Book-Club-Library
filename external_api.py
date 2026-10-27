@@ -1,10 +1,11 @@
 import requests
+from models import Book
 
 OPEN_LIBRARY_URL = "https://openlibrary.org/search.json"
 
 
 def search_books(query):
-    """Search Open Library for books by title, author or ISBN."""
+    """Search Open Library and return the results as Book objects."""
     params = {
         "q": query,
         "limit": 5,
@@ -12,4 +13,14 @@ def search_books(query):
     }
     response = requests.get(OPEN_LIBRARY_URL, params=params, timeout=5)
     response.raise_for_status()
-    return response.json()
+    data = response.json()
+
+    books = []
+    for item in data["docs"]:
+        book = Book(
+            title=item["title"],
+            author_name=item.get("author_name", ["Unknown"]),
+            first_publish_year=item.get("first_publish_year")
+        )
+        books.append(book)
+    return books
