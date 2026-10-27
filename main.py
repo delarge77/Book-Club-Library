@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Header, Depends
 from pydantic import BaseModel, Field, EmailStr, field_validator
+from pwdlib import PasswordHash
 
 import os, json
 from dotenv import load_dotenv
@@ -12,6 +13,7 @@ if not API_KEY:
     raise RuntimeError("API_KEY not found. Check your .env file.")
 
 app = FastAPI()
+password_hash = PasswordHash.recommended()
 
 def check_key(x_api_key: str | None = Header(default=None)):
     if not API_KEY or x_api_key != API_KEY:
@@ -21,32 +23,32 @@ def check_key(x_api_key: str | None = Header(default=None)):
         )
 
 
-default_users = [
+default_members = [
     {"id": 1, "user_name": "GodFather", "email": "francisford@coppola.com", "password": "test1234"},
     {"id": 2, "user_name": "Neuromancer", "email": "william@gibson.com", "password": "test1234"},
     {"id": 3, "user_name": "Hobbit", "email": "jrr@tolkien.com", "password": "test1234"},
     {"id": 4, "user_name": "Foundation", "email": "isaac@asimov.com", "password": "test1234"},
 ]
 
-def load_users():
-    if os.path.exists("movies.json"):
+def load_members():
+    if os.path.exists("members.json"):
         try:
-            with open("movies.json", "r", encoding="utf-8") as fp:
+            with open("members.json", "r", encoding="utf-8") as fp:
                 data = json.load(fp)
                 if data:
                     return data
         except json.JSONDecodeError:
             pass
-    return default_users
+    return default_members
 
-users = load_users()
+members = load_members()
 
 def save_users():
-    with open("movies.json", "w", encoding="utf-8") as fp:
-        json.dump(users, fp, ensure_ascii=False, indent=4)
+    with open("members.json", "w", encoding="utf-8") as fp:
+        json.dump(members, fp, ensure_ascii=False, indent=4)
 
 
-class User(BaseModel):
+class Member(BaseModel):
     user_name: str = Field(min_length=5)
     email: EmailStr
     password: str = Field(min_length=3)
@@ -58,15 +60,16 @@ class User(BaseModel):
             raise ValueError("This field cannot be empty")
         return value
 
-@app.post("/users/register", status_code=201, dependencies=[Depends(check_key)])
-def add_new_user(user: User):
+@app.post("/members/register", status_code=201, dependencies=[Depends(check_key)])
+def add_new_user(member: Member):
     try:
-        new_id = max((m["id"] for m in users), default=0) + 1
-        new_user = {"id":new_id, "user_name":user.user_name, "email":user.email, "password": user.password}
-        users.append(new_user)
+        new_id = max((m["id"] for m in members), default=0) + 1
+        hashed_password = password_hash.hash(member.password)
+        new_user = {"id":new_id, "user_name":member.user_name, "email":member.email, "password": hashed_password}
+        members.append(new_user)
         # Store the user on database instead
         save_users()
-        print(f"✅ User '{user.user_name}' registered successfully! (201 Created)")
+        print(f"✅ User '{member.user_name}' registered successfully! (201 Created)")
         return new_user
     except Exception as error:
         print(f"❌ Error registering user: {error}")
