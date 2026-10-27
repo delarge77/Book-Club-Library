@@ -1,0 +1,36 @@
+[
+    {
+        "id": 1,
+        "user_name": "GodFather",
+        "email": "francisford@coppola.com",
+        "password": "test1234"
+    },
+    {
+        "id": 2,
+        "user_name": "Neuromancer",
+        "email": "william@gibson.com",
+        "password": "test1234"
+    },
+    {
+        "id": 3,
+        "user_name": "Hobbit",
+        "email": "jrr@tolkien.com",
+        "password": "test1234"
+    },
+    {
+        "id": 4,
+        "user_name": "Foundation",
+        "email": "isaac@asimov.com",
+        "password": "test1234"
+    },
+    {
+        "id": 5,
+        "user_name": "Delarge",
+        "email": "user@example.com",
+        "password": "$argon2id$v=19$m=65536,t=3,p=4$XZuUda8Pu3kWSNrKsqbZlw$w7aMfOX4OTTLRDYuMesoGZ/FV6Dwl1bu90fupvpM+2A"
+    },
+    {
+        "id": 6,
+        "user_name": "string"
+    }
+]
