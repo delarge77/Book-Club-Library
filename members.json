@@ -28,5 +28,9 @@
         "user_name": "Delarge",
         "email": "user@example.com",
         "password": "$argon2id$v=19$m=65536,t=3,p=4$XZuUda8Pu3kWSNrKsqbZlw$w7aMfOX4OTTLRDYuMesoGZ/FV6Dwl1bu90fupvpM+2A"
+    },
+    {
+        "id": 6,
+        "user_name": "string"
     }
 ]

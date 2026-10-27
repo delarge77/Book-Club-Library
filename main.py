@@ -52,7 +52,7 @@ def add_new_user(member: Member):
     try:
         new_id = max((m["id"] for m in members), default=0) + 1
         hashed_password = password_hash.hash(member.password)
-        new_user = {"id":new_id, "user_name":member.user_name, "password": hashed_password}
+        new_user = {"id":new_id, "user_name":member.user_name}
         members.append(new_user)
         # Store the user on database instead
         save_users()
