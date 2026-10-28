@@ -17,6 +17,8 @@ from database import (
     get_all_catalogued_books,
     get_catalogued_book_by_id,
     get_member_by_id,
+    get_loan_by_id,
+    return_loan,
 )
 from models import LoanCreate, Member
 from external_api import search_books
@@ -207,3 +209,15 @@ def lend_book(loan: LoanCreate):
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=409, detail="Book is already on loan")
     return {"loan_id": new_loan_id}
+
+
+@app.patch("/loans/{loan_id}/return", dependencies=[Depends(check_key)])
+def return_book(loan_id: int):
+    """Return loan"""
+    loan = get_loan_by_id(loan_id)
+    if loan is None:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    if loan["return_date"] is not None:
+        raise HTTPException(status_code=409, detail="Loan already returned")
+    return_loan(loan_id)
+    return {"loan_id": loan_id, "status": "returned"}

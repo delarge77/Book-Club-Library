@@ -129,6 +129,29 @@ def create_loan(book_id: int, member_id: int):
     return cursor.lastrowid
 
 
+def return_loan(loan_id: int):
+    """return loaned book by loan_id, set return date to todays date"""
+    return_date = date.today().isoformat()
+    with get_connection() as connection:
+        connection.execute(
+            """
+        UPDATE loans SET return_date = ? WHERE loan_id = ?
+        """,
+            (return_date, loan_id),
+        )
+
+
+def get_loan_by_id(loan_id: int) -> dict | None:
+    """Return loan by loan_id, or None if not found"""
+    with get_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT loan_id, return_date FROM loans WHERE loan_id = ?""",
+            (loan_id,),
+        ).fetchone()
+    return dict(row) if row is not None else None
+
+
 def get_member_by_id(member_id: int) -> dict | None:
     """Return member by member_id, or None if not found"""
     with get_connection() as connection:
