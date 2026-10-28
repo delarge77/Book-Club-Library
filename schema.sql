@@ -8,6 +8,7 @@ CREATE TABLE authors (
 CREATE TABLE books (
     book_id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
+    author_name TEXT NOT NULL,
     publication_year INTEGER,
     CHECK (
         publication_year IS NULL

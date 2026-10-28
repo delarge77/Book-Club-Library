@@ -3,10 +3,9 @@ from pydantic import Field, field_validator, BaseModel, EmailStr
 
 class Book(BaseModel):
     """A book with title, author name and first publish year."""
-
     title: str
-    author_name: list[str]
-    first_publish_year: int | None = None
+    author_name: str
+    publication_year: int | None = None
 
 
 class Member(BaseModel):

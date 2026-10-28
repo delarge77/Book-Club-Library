@@ -119,3 +119,16 @@ def get_member_by_id(member_id: int) -> dict | None:
         ).fetchone()
 
     return dict(row) if row is not None else None
+
+def add_book(title: str, author_name: str, publication_year: int ) -> int:
+    """Insert a new bookd and return their ID."""
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            INSERT INTO books (title, author_name, publication_year)
+            VALUES (?, ?, ?)
+            """,
+            (title, author_name, publication_year),
+        )
+
+        return cursor.lastrowid

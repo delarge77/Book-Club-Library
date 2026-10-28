@@ -16,10 +16,10 @@ AUTHORS = [
 ]
 
 BOOKS = [
-    ("Pride and Prejudice", 1813),
-    ("Nineteen Eighty-Four", 1949),
-    ("Frankenstein", 1818),
-    ("Good Omens", 1990),
+    ("Pride and Prejudice", "author_name_1", 1813),
+    ("Nineteen Eighty-Four", "author_name_2", 1949),
+    ("Frankenstein", "author_name_3", 1818),
+    ("Good Omens", "author_name_4", 1990),
 ]
 
 MEMBERS = [
@@ -73,8 +73,8 @@ def seed_books(connection) -> None:
     """Insert sample books."""
     connection.executemany(
         """
-        INSERT INTO books (title, publication_year)
-        VALUES (?, ?)
+        INSERT INTO books (title, author_name, publication_year)
+        VALUES (?, ?, ?)
         """,
         BOOKS,
     )
