@@ -9,7 +9,7 @@ import jwt
 from jwt.exceptions import InvalidTokenError
 from models import Member, LoginRequest, TokenResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from database import get_all_catalogued_books, get_catalogued_book_by_id, get_all_members, add_member, get_member_by_email, get_never_borrowed_books
+from database import get_all_catalogued_books, get_catalogued_book_by_id, get_all_members, add_member, get_member_by_email, get_never_borrowed_books, delete_book
 
 
 from database import (
@@ -179,6 +179,17 @@ def get_catalogued_book(book_id: int):
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
     return book
+
+
+@app.delete("/books/{book_id}", status_code=204, dependencies=[Depends(check_key)])
+def remove_book(book_id: int):
+    """Delete a book using book_id."""
+    try:
+        deleted = delete_book(book_id)
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="Book has loans and cannot be removed")
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Book not found")
 
 
 @app.post("/loans", status_code=201, dependencies=[Depends(check_key)])
