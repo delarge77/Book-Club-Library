@@ -23,9 +23,24 @@ BOOKS = [
 ]
 
 MEMBERS = [
-    ("Alex Andersson", "alex@example.com", "0701112233"),
-    ("Sam Berg", "sam@example.com", None),
-    ("Robin Carlsson", "robin@example.com", "0704445566"),
+    (
+        "Alex Andersson",
+        "alex@example.com",
+        "0701112233",
+        "$argon2id$v=19$m=65536,t=3,p=4$3Hq9BXYaN3JsnkmcltfWHA$paZBNkRUUq1EjcVbEo/qlp/aLKh47T/UEFJ0CzfU5fU",
+    ),
+    (
+        "Sam Berg",
+        "sam@example.com",
+        None,
+        "$argon2id$v=19$m=65536,t=3,p=4$7DejaYqYc3VGNL+Loxq8WA$hYVOc2TdaMj6MNouniDqIfLHeMen6Y1TL6z/+OkXqEE",
+    ),
+    (
+        "Robin Carlsson",
+        "robin@example.com",
+        "0704445566",
+        "$argon2id$v=19$m=65536,t=3,p=4$lHGI+nuMnCUE+MkLW1JLYg$6w2khIuj85cim88Nhi3FzUqz3I7c35akMnznK4Gz/xo",
+    ),
 ]
 
 
@@ -88,8 +103,8 @@ def seed_members(connection) -> None:
     """Insert sample library members."""
     connection.executemany(
         """
-        INSERT INTO members (name, email, phone)
-        VALUES (?, ?, ?)
+        INSERT INTO members (name, email, phone, password_hash)
+        VALUES (?, ?, ?,?)
         """,
         MEMBERS,
     )

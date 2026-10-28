@@ -1,11 +1,12 @@
 from pydantic import Field, field_validator, BaseModel, EmailStr
 
 class Member(BaseModel):
-    user_name: str = Field(min_length=5)
+    name: str = Field(min_length=5)
     email: EmailStr
+    phone: str
     password: str = Field(min_length=3)
 
-    @field_validator("user_name", "password", mode="before")
+    @field_validator("name", "password", mode="before")
     @classmethod
     def reject_empty_or_whitespace(cls, value):
         if isinstance(value, str) and not value.strip():
@@ -13,7 +14,7 @@ class Member(BaseModel):
         return value
 
 class LoginRequest(BaseModel):
-    user_name: str
+    name: str
     password: str
 
 class TokenResponse(BaseModel):

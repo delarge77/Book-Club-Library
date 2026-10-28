@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pwdlib import PasswordHash
 import jwt
 from jwt.exceptions import InvalidTokenError
-from database import get_all_catalogued_books, get_catalogued_book_by_id
+from database import get_all_catalogued_books, get_catalogued_book_by_id, get_all_members, add_member, get_member_by_name
 from models import Member, LoginRequest, TokenResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -33,13 +33,13 @@ def check_key(x_api_key: str | None = Header(default=None)):
     if not API_KEY or x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
-def create_access_token(user_id: int) -> str:
+def create_access_token(member_id: int) -> str:
     expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
     payload = {
-        "sub": str(user_id),
+        "sub": str(member_id),
         "exp": expires_at
     }
 
@@ -52,9 +52,9 @@ def get_current_user(
 
     try:
         payload = jwt.decode( token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
+        member_id = payload.get("sub")
 
-        if not user_id:
+        if not member_id:
             raise ValueError("Missing subject")
 
     except (InvalidTokenError, ValueError):
@@ -62,7 +62,7 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token", headers={"WWW-Authenticate": "Bearer"})
 
-    user = next((m for m in members if str(m["id"]) == user_id), None)
+    user = next((m for m in get_all_members() if str(m["member_id"]) == member_id), None)
 
     if user is None:
         raise HTTPException(
@@ -72,69 +72,66 @@ def get_current_user(
     return user
 
 
-default_members = []
+import sqlite3
+from fastapi import HTTPException, Depends
 
-
-def load_members():
-    if os.path.exists("members.json"):
-        try:
-            with open("members.json", "r", encoding="utf-8") as fp:
-                data = json.load(fp)
-                if data:
-                    return data
-        except json.JSONDecodeError:
-            pass
-    return default_members
-
-
-members = load_members()
-
-
-def save_users():
-    with open("members.json", "w", encoding="utf-8") as fp:
-        json.dump(members, fp, ensure_ascii=False, indent=4)
-
-
-@app.post("/members/register", status_code=201, dependencies=[Depends(check_key)])
+@app.post(
+    "/members/register",
+    status_code=201,
+    dependencies=[Depends(check_key)]
+)
 def add_new_user(member: Member):
     try:
-        new_id = max((m["id"] for m in members), default=0) + 1
         hashed_password = password_hash.hash(member.password)
-        new_user = {
-            "id": new_id,
-            "user_name": member.user_name,
-            "email": member.email,
-            "password": hashed_password,
+        new_id = add_member( name = member.name, email=str(member.email), phone=member.phone, password_hash=hashed_password)
+        print(f"✅ Member '{member.name}' registered successfully! (201 Created)")
+
+        return {
+            "member_id": new_id,
+            "name": member.name,
+            "email": str(member.email),
+            "phone": member.phone,
         }
-        members.append(new_user)
-        # Store the user on database instead
-        save_users()
-        print(f"✅ User '{member.user_name}' registered successfully! (201 Created)")
-        return {"id": new_id, "user_name": member.user_name, "email": member.email}
+
+    except sqlite3.IntegrityError as error:
+        print(f"❌ Could not register member: {error}")
+        raise HTTPException(
+            status_code=409,
+            detail="Email already registered or invalid member data"
+        )
+
     except Exception as error:
-        print(f"Error registering user: {error}")
-        raise HTTPException(status_code=500, detail="Could not register user")
+        print(f"❌ Error registering member: {error}")
+        raise HTTPException(
+            status_code=500,
+            detail="Could not register member"
+        )
 
 
-@app.post("/members/login", response_model=TokenResponse, status_code=201, dependencies=[Depends(check_key)])
+
+@app.post("/members/login", response_model=TokenResponse, status_code=200, dependencies=[Depends(check_key)])
 def login(member: LoginRequest):
-    user = next((m for m in members if m["user_name"] == member.user_name), None)
-    if user is None or not password_hash.verify(member.password, user["password"]):
+    user = get_member_by_name(member.name)
+
+    if user is None or not password_hash.verify(member.password, user["password_hash"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password")
+            detail="Invalid username or password"
+        )
 
-    access_token = create_access_token(user["id"])
-    print("Access Token: {access_token}")
+
+    access_token = create_access_token(user["member_id"])
+    print("✅ Login successful! Access token generated.")
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 @app.get("/members/me", status_code=201)
 def get_my_profile(current_user: dict = Depends(get_current_user)):
     return {
-        "id": current_user["id"],
-        "user_name": current_user["user_name"],
-        "email": current_user["email"]
+        "member_id": current_user["member_id"],
+        "name": current_user["name"],
+        "email": current_user["email"],
+        "phone": current_user["phone"]
     }
 
 @app.get("/books")

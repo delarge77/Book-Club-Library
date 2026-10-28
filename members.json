@@ -1,8 +1,0 @@
-[
-    {
-        "id": 1,
-        "user_name": "alessandro",
-        "email":"alessandro@pinto.com",
-        "password": "$argon2id$v=19$m=65536,t=3,p=4$G2WvaWTmLzXCQH37tXcweg$6l5KTdVd8/fuI6ir3IurXmc8x2Kov+VQuuSYIbynC30"
-    }
-]

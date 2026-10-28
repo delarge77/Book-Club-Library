@@ -30,6 +30,49 @@ def get_all_catalogued_books() -> list[dict]:
 
     return [dict(row) for row in rows]
 
+def get_all_members() -> list[dict]:
+    """Return all members."""
+    with get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    member_id,
+                    name,
+                    email,
+                    phone
+                FROM members
+                """
+            ).fetchall()
+    
+    return [dict(row) for row in rows]
+
+
+def add_member( name: str, email: str, phone: str | None, password_hash: str) -> int:
+    """Insert a new member and return their ID."""
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            INSERT INTO members (name, email, phone, password_hash)
+            VALUES (?, ?, ?, ?)
+            """,
+            (name, email, phone, password_hash),
+        )
+
+        return cursor.lastrowid
+
+def get_member_by_name(name: str) -> dict | None:
+    """Return a member by name, including their password hash."""
+    with get_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT member_id, name, email, phone, password_hash
+            FROM members
+            WHERE name = ?
+            """,
+            (name,),
+        ).fetchone()
+
+    return dict(row) if row else None
 
 def get_catalogued_book_by_id(book_id: int) -> dict | None:
     """Return a catalogued book by ID, or None if not found."""
