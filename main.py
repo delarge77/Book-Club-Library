@@ -7,9 +7,9 @@ from pwdlib import PasswordHash
 
 import jwt
 from jwt.exceptions import InvalidTokenError
-from database import get_all_catalogued_books, get_catalogued_book_by_id, get_all_members, add_member, get_member_by_email
 from models import Member, LoginRequest, TokenResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from database import get_all_catalogued_books, get_catalogued_book_by_id, get_all_members, add_member, get_member_by_email, get_never_borrowed_books
 
 
 from database import (
@@ -164,6 +164,12 @@ def search_open_library(q: str):
             status_code=503, detail="Open Library is not reachable. Try again later."
         )
     return books
+
+
+@app.get("/books/never-borrowed")
+def books_never_borrowed():
+    """Return books that have never been borrowed."""
+    return get_never_borrowed_books()
 
 
 @app.get("/books/{book_id}")
