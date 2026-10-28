@@ -1,0 +1,3 @@
+# Authentication and password security
+pwdlib[argon2]
+PyJWT
