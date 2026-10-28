@@ -148,7 +148,7 @@ def add_new_book(book: Book, _: dict = Depends(get_current_user)):
                 "book_id": new_book_id,
                 "title": book.title,
                 "author_name": book.author_name,
-                "publish_year": book.publication_year,
+                "publication_year": book.publication_year,
             }
     
     except sqlite3.IntegrityError as error:
