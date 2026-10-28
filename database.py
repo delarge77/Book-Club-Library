@@ -62,16 +62,16 @@ def add_member( name: str, email: str, phone: str | None, password_hash: str) ->
 
         return cursor.lastrowid
 
-def get_member_by_name(name: str) -> dict | None:
+def get_member_by_email(email: str) -> dict | None:
     """Return a member by name, including their password hash."""
     with get_connection() as connection:
         row = connection.execute(
             """
             SELECT member_id, name, email, phone, password_hash
             FROM members
-            WHERE name = ?
+            WHERE email = ?
             """,
-            (name,),
+            (email,),
         ).fetchone()
 
     return dict(row) if row else None

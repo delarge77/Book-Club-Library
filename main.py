@@ -7,7 +7,7 @@ from pwdlib import PasswordHash
 
 import jwt
 from jwt.exceptions import InvalidTokenError
-from database import get_all_catalogued_books, get_catalogued_book_by_id, get_all_members, add_member, get_member_by_name
+from database import get_all_catalogued_books, get_catalogued_book_by_id, get_all_members, add_member, get_member_by_email
 from models import Member, LoginRequest, TokenResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -122,12 +122,12 @@ def add_new_user(member: Member):
 
 @app.post("/members/login", response_model=TokenResponse, status_code=200, dependencies=[Depends(check_key)])
 def login(member: LoginRequest):
-    user = get_member_by_name(member.name)
+    user = get_member_by_email(member.email)
 
     if user is None or not password_hash.verify(member.password, user["password_hash"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password"
+            detail="Invalid email or password"
         )
 
 

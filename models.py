@@ -24,7 +24,7 @@ class Member(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    name: str
+    email: EmailStr
     password: str
 
 class TokenResponse(BaseModel):
