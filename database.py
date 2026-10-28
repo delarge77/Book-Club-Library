@@ -1,9 +1,11 @@
-from pathlib import Path
 import sqlite3
-
+from datetime import date, timedelta
+from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE_PATH = BASE_DIR / "library.db"
+
+LOAN_PERIOD_DAYS = 14
 
 
 def get_connection() -> sqlite3.Connection:
@@ -44,6 +46,33 @@ def get_catalogued_book_by_id(book_id: int) -> dict | None:
             WHERE book_id = ?
             """,
             (book_id,),
+        ).fetchone()
+
+    return dict(row) if row is not None else None
+
+
+def create_loan(book_id: int, member_id: int):
+    """Create loan entry using book ID and member ID"""
+    loan_date = date.today().isoformat()
+    due_date = (date.today() + timedelta(days=LOAN_PERIOD_DAYS)).isoformat()
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            INSERT INTO loans (book_id, member_id, loan_date, due_date)
+            VALUES (?,?,?,?)
+            """,
+            (book_id, member_id, loan_date, due_date),
+        )
+    return cursor.lastrowid
+
+
+def get_member_by_id(member_id: int) -> dict | None:
+    """Return member by member_id, or None if not found"""
+    with get_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT member_id FROM members WHERE member_id = ?""",
+            (member_id,),
         ).fetchone()
 
     return dict(row) if row is not None else None
