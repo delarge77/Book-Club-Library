@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pwdlib import PasswordHash
 
-from database import get_all_catalogued_books, get_catalogued_book_by_id
+from database import get_all_catalogued_books, get_catalogued_book_by_id, get_never_borrowed_books
 from external_api import search_books
 from models import Member
 
@@ -115,6 +115,12 @@ def search_open_library(q: str):
             detail="Open Library is not reachable. Try again later."
         )
     return books
+
+
+@app.get("/books/never-borrowed")
+def books_never_borrowed():
+    """Return books that have never been borrowed."""
+    return get_never_borrowed_books()
 
 
 @app.get("/books/{book_id}")

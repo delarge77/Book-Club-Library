@@ -47,3 +47,23 @@ def get_catalogued_book_by_id(book_id: int) -> dict | None:
         ).fetchone()
 
     return dict(row) if row is not None else None
+
+
+def get_never_borrowed_books() -> list[dict]:
+    """Return books that have never been borrowed."""
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                books.book_id,
+                books.title,
+                books.publication_year
+            FROM books
+            LEFT JOIN loans
+                ON loans.book_id = books.book_id
+            WHERE loans.loan_id IS NULL
+            ORDER BY books.title
+            """
+        ).fetchall()
+
+    return [dict(row) for row in rows]
