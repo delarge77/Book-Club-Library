@@ -1,18 +1,37 @@
-import json
 import os
-
+from datetime import datetime, timedelta, timezone
+import sqlite3
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pwdlib import PasswordHash
 
-from database import get_all_catalogued_books, get_catalogued_book_by_id, get_never_borrowed_books
-from external_api import search_books
-from models import Member
+import jwt
+from jwt.exceptions import InvalidTokenError
+from models import Member, LoginRequest, TokenResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from database import get_all_catalogued_books, get_catalogued_book_by_id, get_all_members, add_member, get_member_by_email, get_never_borrowed_books
 
+
+from database import (
+    create_loan,
+    get_all_catalogued_books,
+    get_catalogued_book_by_id,
+    get_member_by_id,
+)
+from models import LoanCreate, Member
+from external_api import search_books
 
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY is not configured")
+
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
+
+bearer_scheme = HTTPBearer()
 
 if not API_KEY:
     raise RuntimeError("API_KEY not found. Check your .env file.")
@@ -25,77 +44,109 @@ def check_key(x_api_key: str | None = Header(default=None)):
     if not API_KEY or x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
+def create_access_token(member_id: int) -> str:
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+    )
 
-default_members = [
-    {
-        "id": 1,
-        "user_name": "GodFather",
-        "email": "francisford@coppola.com",
-        "password": "test1234",
-    },
-    {
-        "id": 2,
-        "user_name": "Neuromancer",
-        "email": "william@gibson.com",
-        "password": "test1234",
-    },
-    {
-        "id": 3,
-        "user_name": "Hobbit",
-        "email": "jrr@tolkien.com",
-        "password": "test1234",
-    },
-    {
-        "id": 4,
-        "user_name": "Foundation",
-        "email": "isaac@asimov.com",
-        "password": "test1234",
-    },
-]
+    payload = {
+        "sub": str(member_id),
+        "exp": expires_at
+    }
 
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-def load_members():
-    if os.path.exists("members.json"):
-        try:
-            with open("members.json", "r", encoding="utf-8") as fp:
-                data = json.load(fp)
-                if data:
-                    return data
-        except json.JSONDecodeError:
-            pass
-    return default_members
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
+):
+    token = credentials.credentials
+
+    try:
+        payload = jwt.decode( token, SECRET_KEY, algorithms=[ALGORITHM])
+        member_id = payload.get("sub")
+
+        if not member_id:
+            raise ValueError("Missing subject")
+
+    except (InvalidTokenError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token", headers={"WWW-Authenticate": "Bearer"})
+
+    user = next((m for m in get_all_members() if str(m["member_id"]) == member_id), None)
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"})
+    return user
 
 
-members = load_members()
+import sqlite3
+from fastapi import HTTPException, Depends
 
-
-def save_users():
-    with open("members.json", "w", encoding="utf-8") as fp:
-        json.dump(members, fp, ensure_ascii=False, indent=4)
-
-
-@app.post("/members/register", status_code=201, dependencies=[Depends(check_key)])
+@app.post(
+    "/members/register",
+    status_code=201,
+    dependencies=[Depends(check_key)]
+)
 def add_new_user(member: Member):
     try:
-        new_id = max((m["id"] for m in members), default=0) + 1
         hashed_password = password_hash.hash(member.password)
-        new_user = {
-            "id": new_id,
-            "user_name": member.user_name,
-            "password": hashed_password,
-        }
-        members.append(new_user)
-        # Store the user on database instead
-        save_users()
-        print(f"✅ User '{member.user_name}' registered successfully! (201 Created)")
-        return {"id": new_id, "user_name": member.user_name, "email": member.email}
-    except Exception as error:
-        print(f"❌ Error registering user: {error}")
-        raise
+        new_id = add_member( name = member.name, email=str(member.email), phone=member.phone, password_hash=hashed_password)
+        print(f"✅ Member '{member.name}' registered successfully! (201 Created)")
 
+        return {
+            "member_id": new_id,
+            "name": member.name,
+            "email": str(member.email),
+            "phone": member.phone,
+        }
+
+    except sqlite3.IntegrityError as error:
+        print(f"❌ Could not register member: {error}")
+        raise HTTPException(
+            status_code=409,
+            detail="Email already registered or invalid member data"
+        )
+
+    except Exception as error:
+        print(f"❌ Error registering member: {error}")
+        raise HTTPException(
+            status_code=500,
+            detail="Could not register member"
+        )
+
+
+
+@app.post("/members/login", response_model=TokenResponse, status_code=200, dependencies=[Depends(check_key)])
+def login(member: LoginRequest):
+    user = get_member_by_email(member.email)
+
+    if user is None or not password_hash.verify(member.password, user["password_hash"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
+        )
+
+
+    access_token = create_access_token(user["member_id"])
+    print("✅ Login successful! Access token generated.")
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/members/me", status_code=201)
+def get_my_profile(current_user: dict = Depends(get_current_user)):
+    return {
+        "member_id": current_user["member_id"],
+        "name": current_user["name"],
+        "email": current_user["email"],
+        "phone": current_user["phone"]
+    }
 
 @app.get("/books")
-def list_catalogued_books():
+def get_catalogued_books():
     """Return all books in the library catalogue."""
     return get_all_catalogued_books()
 
@@ -105,14 +156,12 @@ def search_open_library(q: str):
     """Search Open Library and return the matching books."""
     if not q.strip():
         raise HTTPException(
-            status_code=400,
-            detail="Please type something to search for."
+            status_code=400, detail="Please type something to search for."
         )
     books = search_books(q)
     if books is None:
         raise HTTPException(
-            status_code=503,
-            detail="Open Library is not reachable. Try again later."
+            status_code=503, detail="Open Library is not reachable. Try again later."
         )
     return books
 
@@ -124,9 +173,26 @@ def books_never_borrowed():
 
 
 @app.get("/books/{book_id}")
-def list_catalogued_book(book_id: int):
+def get_catalogued_book(book_id: int):
     """Return one book using book_id"""
     book = get_catalogued_book_by_id(book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
     return book
+
+
+@app.post("/loans", status_code=201, dependencies=[Depends(check_key)])
+def lend_book(loan: LoanCreate):
+    """Create a new loan using book_id and member_id"""
+    book = get_catalogued_book_by_id(loan.book_id)
+    if book is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+    member = get_member_by_id(loan.member_id)
+    if member is None:
+        raise HTTPException(status_code=404, detail="Member not found")
+    try:
+        new_loan_id = create_loan(loan.book_id, loan.member_id)
+
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="Book is already on loan")
+    return {"loan_id": new_loan_id}

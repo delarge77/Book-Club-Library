@@ -34,7 +34,8 @@ CREATE TABLE members (
     member_id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
-    phone TEXT
+    phone TEXT,
+    password_hash TEXT NOT NULL
 );
 
 CREATE TABLE loans (
