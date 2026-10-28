@@ -6,7 +6,9 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from pwdlib import PasswordHash
 
 from database import get_all_catalogued_books, get_catalogued_book_by_id
+from external_api import search_books
 from models import Member
+
 
 load_dotenv()
 
@@ -96,6 +98,23 @@ def add_new_user(member: Member):
 def list_catalogued_books():
     """Return all books in the library catalogue."""
     return get_all_catalogued_books()
+
+
+@app.get("/books/search")
+def search_open_library(q: str):
+    """Search Open Library and return the matching books."""
+    if not q.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Please type something to search for."
+        )
+    books = search_books(q)
+    if books is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Open Library is not reachable. Try again later."
+        )
+    return books
 
 
 @app.get("/books/{book_id}")
