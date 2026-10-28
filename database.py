@@ -45,7 +45,7 @@ def get_all_members() -> list[dict]:
                 FROM members
                 """
             ).fetchall()
-    
+
     return [dict(row) for row in rows]
 
 
@@ -112,8 +112,8 @@ def get_never_borrowed_books() -> list[dict]:
         ).fetchall()
 
     return [dict(row) for row in rows]
-  
-  
+
+
 def create_loan(book_id: int, member_id: int):
     """Create loan entry using book ID and member ID"""
     loan_date = date.today().isoformat()
@@ -139,3 +139,16 @@ def get_member_by_id(member_id: int) -> dict | None:
         ).fetchone()
 
     return dict(row) if row is not None else None
+
+
+def delete_book(book_id: int) -> bool:
+    """Delete a book by ID. Return True if deleted, False if not found."""
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            DELETE FROM books
+            WHERE book_id = ?
+            """,
+            (book_id,),
+        )
+    return cursor.rowcount > 0
