@@ -1,9 +1,17 @@
 from pydantic import Field, field_validator, BaseModel, EmailStr
 
+
+class Book(BaseModel):
+    """A book with title, author name and first publish year."""
+    title: str
+    author_name: list[str]
+    first_publish_year: int | None = None
+
+
 class Member(BaseModel):
     name: str = Field(min_length=5)
     email: EmailStr
-    phone: str
+    phone: str | None = None
     password: str = Field(min_length=3)
 
     @field_validator("name", "password", mode="before")
