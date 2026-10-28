@@ -1,14 +1,25 @@
-import json
 import os
 from datetime import datetime, timedelta, timezone
+import sqlite3
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pwdlib import PasswordHash
+
 import jwt
 from jwt.exceptions import InvalidTokenError
 from database import get_all_catalogued_books, get_catalogued_book_by_id, get_all_members, add_member, get_member_by_name
 from models import Member, LoginRequest, TokenResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+
+from database import (
+    create_loan,
+    get_all_catalogued_books,
+    get_catalogued_book_by_id,
+    get_member_by_id,
+)
+from models import LoanCreate, Member
+from external_api import search_books
 
 load_dotenv()
 
@@ -135,7 +146,7 @@ def get_my_profile(current_user: dict = Depends(get_current_user)):
     }
 
 @app.get("/books")
-def list_catalogued_books():
+def get_catalogued_books():
     """Return all books in the library catalogue."""
     return get_all_catalogued_books()
 
@@ -145,22 +156,37 @@ def search_open_library(q: str):
     """Search Open Library and return the matching books."""
     if not q.strip():
         raise HTTPException(
-            status_code=400,
-            detail="Please type something to search for."
+            status_code=400, detail="Please type something to search for."
         )
     books = search_books(q)
     if books is None:
         raise HTTPException(
-            status_code=503,
-            detail="Open Library is not reachable. Try again later."
+            status_code=503, detail="Open Library is not reachable. Try again later."
         )
     return books
 
 
 @app.get("/books/{book_id}")
-def list_catalogued_book(book_id: int):
+def get_catalogued_book(book_id: int):
     """Return one book using book_id"""
     book = get_catalogued_book_by_id(book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
     return book
+
+
+@app.post("/loans", status_code=201, dependencies=[Depends(check_key)])
+def lend_book(loan: LoanCreate):
+    """Create a new loan using book_id and member_id"""
+    book = get_catalogued_book_by_id(loan.book_id)
+    if book is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+    member = get_member_by_id(loan.member_id)
+    if member is None:
+        raise HTTPException(status_code=404, detail="Member not found")
+    try:
+        new_loan_id = create_loan(loan.book_id, loan.member_id)
+
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="Book is already on loan")
+    return {"loan_id": new_loan_id}
