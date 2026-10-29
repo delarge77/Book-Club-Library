@@ -3,13 +3,18 @@ from datetime import datetime, timedelta, timezone
 import sqlite3
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pwdlib import PasswordHash
-
 import jwt
 from jwt.exceptions import InvalidTokenError
-
-from models import Member, LoginRequest, TokenResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from models import ( 
+    Member, 
+    LoginRequest, 
+    TokenResponse, 
+    Book, 
+    BookUpdate, 
+    LoanCreate
+)
 
 from database import (
     get_all_catalogued_books, 
@@ -19,20 +24,14 @@ from database import (
     get_member_by_email,
     add_book,
     get_never_borrowed_books,
-    delete_book,
     get_most_borrowed_books,
-)
-from models import Member, LoginRequest, TokenResponse, Book
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
-from database import (
+    delete_book,
     create_loan,
-    get_all_catalogued_books,
-    get_catalogued_book_by_id,
     get_loan_by_id,
     return_loan,
+    update_book_by_id,
 )
-from models import LoanCreate, Member
+
 from external_api import search_books
 
 load_dotenv()
@@ -201,6 +200,35 @@ def search_open_library(q: str):
             status_code=503, detail="Open Library is not reachable. Try again later."
         )
     return books
+
+@app.patch("/books/update/{book_id}")
+def update_book(book_id: int, book_update: BookUpdate, _: dict = Depends(get_current_user),):
+
+    update_data = book_update.model_dump(exclude_unset=True)
+
+    if not update_data:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one field must be provided"
+        )
+
+    try:
+        updated_book = update_book_by_id(book_id, update_data)
+
+        if updated_book is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Book not found"
+            )
+
+        return updated_book
+
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="Could not update book due to a data conflict"
+        )
+
 
 
 @app.get("/books/never-borrowed")
