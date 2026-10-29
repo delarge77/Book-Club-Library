@@ -32,7 +32,6 @@ def search_books(query):
 
     books = []
     for item in data["docs"]:
-        print(f"book: {item}")
         book = ExternalBook( 
             title=item["title"], 
             #This handles both a missing field and a None value.
