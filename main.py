@@ -28,7 +28,9 @@ from database import (
     create_loan,
     get_loan_by_id,
     return_loan,
-    update_book_by_id,
+    update_book_by_id, 
+    get_member_by_id, 
+    get_member_current_loans
     search_members,
     delete_book,
     delete_member,
@@ -320,6 +322,18 @@ def get_all_registered_members(_: dict = Depends(get_current_user)):
     """Return all registered members"""
     return get_all_members()
 
+  
+@app.get("/members/{member_id}/loans/current")
+def get_current_loans(member_id: int, _: dict = Depends(get_current_user),):
+
+    member = get_member_by_id(member_id)
+    if member is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Member not found",
+        )
+
+    return get_member_current_loans(member_id)
 
 @app.get("/members/search")
 def filter_members(q: str, _: dict = Depends(get_current_user)):

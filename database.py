@@ -291,3 +291,25 @@ def update_book_by_id(book_id: int, update_data: dict) -> dict | None:
         ).fetchone()
 
         return dict(row)
+
+def get_member_current_loans(member_id: int) -> list[dict]:
+    """Return all active loans for a member."""
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                loans.loan_id,
+                loans.book_id,
+                books.title,
+                loans.loan_date,
+                loans.due_date
+            FROM loans
+            JOIN books ON loans.book_id = books.book_id
+            WHERE loans.member_id = ?
+              AND loans.return_date IS NULL
+            ORDER BY loans.due_date
+            """,
+            (member_id,),
+        ).fetchall()
+
+    return [dict(row) for row in rows]
