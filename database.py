@@ -48,6 +48,25 @@ def get_all_members() -> list[dict]:
 
     return [dict(row) for row in rows]
 
+def search_members(q: str) -> list[dict]:
+    """Return members whose name or email contains q."""
+    search = f"%{q}%"
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+                SELECT
+                    member_id,
+                    name,
+                    email,
+                    phone
+                FROM members
+                WHERE name LIKE ? OR email LIKE ?
+                """,
+            (search, search),
+        ).fetchall()
+
+    return [dict(row) for row in rows]
+
 
 def add_member( name: str, email: str, phone: str | None, password_hash: str) -> int:
     """Insert a new member and return their ID."""
@@ -183,6 +202,23 @@ def get_member_by_id(member_id: int) -> dict | None:
         ).fetchone()
 
     return dict(row) if row is not None else None
+
+
+def delete_member(member_id: int) -> bool:
+    """Delete a member by ID.
+
+    Return True if the member was deleted, or False if not found.
+    """
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            DELETE FROM members
+            WHERE member_id = ?
+            """,
+            (member_id,),
+        )
+
+    return cursor.rowcount > 0
 
 
 def add_book(title: str, author_name: str, publication_year: int ) -> int:
