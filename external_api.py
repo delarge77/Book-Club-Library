@@ -1,5 +1,5 @@
 import requests
-from models import Book
+from models import ExternalBook
 
 OPEN_LIBRARY_URL = "https://openlibrary.org/search.json"
 
@@ -32,11 +32,11 @@ def search_books(query):
 
     books = []
     for item in data["docs"]:
-        book = Book(
-            title=item["title"],
-            author_name=item.get("author_name", ["Unknown"]),
-            first_publish_year=item.get("first_publish_year")
-        )
+        book = ExternalBook( 
+            title=item["title"], 
+            #This handles both a missing field and a None value.
+            author_name=item.get("author_name") or ["Unknown"],
+            first_publish_year=item.get("first_publish_year"))
         books.append(book)
 
     if not books:
