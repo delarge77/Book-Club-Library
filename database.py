@@ -189,3 +189,48 @@ def delete_book(book_id: int) -> bool:
             (book_id,),
         )
     return cursor.rowcount > 0
+
+def update_book_by_id(book_id: int, update_data: dict) -> dict | None:
+
+    allowed_fields = {
+        "title",
+        "author_name",
+        "publication_year",
+    }
+
+    update_data = {
+        key: value
+        for key, value in update_data.items()
+        if key in allowed_fields
+    }
+
+    if not update_data:
+        return None
+
+    with get_connection() as connection:
+        # Check whether the book exists.
+        existing_book = connection.execute(
+            "SELECT book_id FROM books WHERE book_id = ?",
+            (book_id,)
+        ).fetchone()
+
+        if existing_book is None:
+            return None
+
+        # Update only the supplied fields.
+        fields = ", ".join(
+            f"{field} = ?" for field in update_data
+        )
+        values = list(update_data.values()) + [book_id]
+
+        connection.execute(
+            f"UPDATE books SET {fields} WHERE book_id = ?",
+            values
+        )
+
+        row = connection.execute(
+            "SELECT * FROM books WHERE book_id = ?",
+            (book_id,)
+        ).fetchone()
+
+        return dict(row)
