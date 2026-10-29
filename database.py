@@ -48,6 +48,25 @@ def get_all_members() -> list[dict]:
 
     return [dict(row) for row in rows]
 
+def search_members(q: str) -> list[dict]:
+    """Return members whose name or email contains q."""
+    search = f"%{q}%"
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+                SELECT
+                    member_id,
+                    name,
+                    email,
+                    phone
+                FROM members
+                WHERE name LIKE ? OR email LIKE ?
+                """,
+            (search, search),
+        ).fetchall()
+
+    return [dict(row) for row in rows]
+
 
 def add_member( name: str, email: str, phone: str | None, password_hash: str) -> int:
     """Insert a new member and return their ID."""
