@@ -7,6 +7,12 @@ class Book(BaseModel):
     author_name: str
     publication_year: int | None = None
 
+class ExternalBook(BaseModel):
+     """External API Model from Open Library"""
+     title: str
+     author_name: list[str]
+     first_publish_year: int | None = None
+
 
 class Member(BaseModel):
     name: str = Field(min_length=5)
