@@ -192,6 +192,30 @@ def get_loan_by_id(loan_id: int) -> dict | None:
     return dict(row) if row is not None else None
 
 
+def get_overdue_loans() -> list[dict]:
+    """Return loans that are not returned and past their due date."""
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                loans.loan_id,
+                books.title,
+                members.name,
+                loans.due_date
+            FROM loans
+            JOIN books
+                ON books.book_id = loans.book_id
+            JOIN members
+                ON members.member_id = loans.member_id
+            WHERE loans.return_date IS NULL
+                AND loans.due_date < date('now')
+            ORDER BY loans.due_date
+            """
+        ).fetchall()
+
+    return [dict(row) for row in rows]
+
+
 def get_member_by_id(member_id: int) -> dict | None:
     """Return member by member_id, or None if not found"""
     with get_connection() as connection:
