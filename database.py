@@ -45,7 +45,7 @@ def get_all_members() -> list[dict]:
                 FROM members
                 """
             ).fetchall()
-    
+
     return [dict(row) for row in rows]
 
 
@@ -94,6 +94,26 @@ def get_catalogued_book_by_id(book_id: int) -> dict | None:
     return dict(row) if row is not None else None
 
 
+def get_never_borrowed_books() -> list[dict]:
+    """Return books that have never been borrowed."""
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                books.book_id,
+                books.title,
+                books.publication_year
+            FROM books
+            LEFT JOIN loans
+                ON loans.book_id = books.book_id
+            WHERE loans.loan_id IS NULL
+            ORDER BY books.title
+            """
+        ).fetchall()
+
+    return [dict(row) for row in rows]
+
+
 def create_loan(book_id: int, member_id: int):
     """Create loan entry using book ID and member ID"""
     loan_date = date.today().isoformat()
@@ -109,6 +129,29 @@ def create_loan(book_id: int, member_id: int):
     return cursor.lastrowid
 
 
+def return_loan(loan_id: int):
+    """return loaned book by loan_id, set return date to todays date"""
+    return_date = date.today().isoformat()
+    with get_connection() as connection:
+        connection.execute(
+            """
+        UPDATE loans SET return_date = ? WHERE loan_id = ?
+        """,
+            (return_date, loan_id),
+        )
+
+
+def get_loan_by_id(loan_id: int) -> dict | None:
+    """Return loan by loan_id, or None if not found"""
+    with get_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT loan_id, return_date FROM loans WHERE loan_id = ?""",
+            (loan_id,),
+        ).fetchone()
+    return dict(row) if row is not None else None
+
+
 def get_member_by_id(member_id: int) -> dict | None:
     """Return member by member_id, or None if not found"""
     with get_connection() as connection:
@@ -119,6 +162,7 @@ def get_member_by_id(member_id: int) -> dict | None:
         ).fetchone()
 
     return dict(row) if row is not None else None
+
 
 def add_book(title: str, author_name: str, publication_year: int ) -> int:
     """Insert a new bookd and return their ID."""
@@ -132,3 +176,16 @@ def add_book(title: str, author_name: str, publication_year: int ) -> int:
         )
 
         return cursor.lastrowid
+
+
+def delete_book(book_id: int) -> bool:
+    """Delete a book by ID. Return True if deleted, False if not found."""
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            DELETE FROM books
+            WHERE book_id = ?
+            """,
+            (book_id,),
+        )
+    return cursor.rowcount > 0

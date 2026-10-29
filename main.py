@@ -7,6 +7,10 @@ from pwdlib import PasswordHash
 
 import jwt
 from jwt.exceptions import InvalidTokenError
+
+from models import Member, LoginRequest, TokenResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
 from database import (
     get_all_catalogued_books, 
     get_catalogued_book_by_id, 
@@ -14,16 +18,19 @@ from database import (
     add_member, 
     get_member_by_email,
     add_book,
+    get_never_borrowed_books,
+    delete_book,
 )
 from models import Member, LoginRequest, TokenResponse, Book
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
 
 from database import (
     create_loan,
     get_all_catalogued_books,
     get_catalogued_book_by_id,
     get_member_by_id,
+    get_loan_by_id,
+    return_loan,
 )
 from models import LoanCreate, Member
 from external_api import search_books
@@ -196,6 +203,12 @@ def search_open_library(q: str):
     return books
 
 
+@app.get("/books/never-borrowed")
+def books_never_borrowed():
+    """Return books that have never been borrowed."""
+    return get_never_borrowed_books()
+
+
 @app.get("/books/{book_id}")
 def get_catalogued_book(book_id: int):
     """Return one book using book_id"""
@@ -203,6 +216,17 @@ def get_catalogued_book(book_id: int):
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
     return book
+
+
+@app.delete("/books/{book_id}", status_code=204, dependencies=[Depends(check_key)])
+def remove_book(book_id: int):
+    """Delete a book using book_id."""
+    try:
+        deleted = delete_book(book_id)
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="Book has loans and cannot be removed")
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Book not found")
 
 
 @app.post("/loans", status_code=201, dependencies=[Depends(check_key)])
@@ -220,3 +244,15 @@ def lend_book(loan: LoanCreate):
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=409, detail="Book is already on loan")
     return {"loan_id": new_loan_id}
+
+
+@app.patch("/loans/{loan_id}/return", dependencies=[Depends(check_key)])
+def return_book(loan_id: int):
+    """Return loan"""
+    loan = get_loan_by_id(loan_id)
+    if loan is None:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    if loan["return_date"] is not None:
+        raise HTTPException(status_code=409, detail="Loan already returned")
+    return_loan(loan_id)
+    return {"loan_id": loan_id, "status": "returned"}
