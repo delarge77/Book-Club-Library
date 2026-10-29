@@ -1,10 +1,18 @@
-from pydantic import Field, field_validator, BaseModel, EmailStr
+from pydantic import Field, field_validator, BaseModel, EmailStr, ConfigDict
 
 
 class Book(BaseModel):
     """A book with title, author name and first publish year."""
     title: str
     author_name: str
+    publication_year: int | None = None
+
+class BookUpdate(BaseModel):
+    """Fields that can be updated on a book."""
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None = Field(default=None, min_length=1)
+    author_name: str | None = Field(default=None, min_length=1)
     publication_year: int | None = None
 
 class ExternalBook(BaseModel):

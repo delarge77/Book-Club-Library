@@ -3,37 +3,42 @@ from datetime import datetime, timedelta, timezone
 import sqlite3
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pwdlib import PasswordHash
-
 import jwt
 from jwt.exceptions import InvalidTokenError
-
-from models import Member, LoginRequest, TokenResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from models import ( 
+    Member, 
+    LoginRequest, 
+    TokenResponse, 
+    Book, 
+    BookUpdate, 
+    LoanCreate
+)
 
 from database import (
-    get_all_catalogued_books, 
-    get_catalogued_book_by_id, 
-    get_all_members, 
-    add_member, 
+    get_all_catalogued_books,
+    get_catalogued_book_by_id,
+    get_all_members,
+    add_member,
     get_member_by_email,
     add_book,
     get_never_borrowed_books,
-    delete_book,
-)
-from models import Member, LoginRequest, TokenResponse, Book
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
-from database import (
+    get_most_borrowed_books,
     create_loan,
-    get_all_catalogued_books,
-    get_catalogued_book_by_id,
     get_loan_by_id,
     return_loan,
     get_overdue_loans,
+    update_book_by_id, 
+    get_member_by_id, 
+    get_member_current_loans
+    search_members,
+    delete_book,
+    delete_member,
 )
-from models import LoanCreate, Member
+
 from external_api import search_books
+
 
 load_dotenv()
 
@@ -182,6 +187,29 @@ def get_my_profile(current_user: dict = Depends(get_current_user)):
         "phone": current_user["phone"]
     }
 
+
+@app.delete(
+    "/members/{member_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(check_key)],
+)
+def remove_member(member_id: int) -> None:
+    """Delete a member who has no loan history."""
+    try:
+        deleted = delete_member(member_id)
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Member has loan history and cannot be removed",
+        )
+
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        )
+
+
 @app.get("/books")
 def get_catalogued_books():
     """Return all books in the library catalogue."""
@@ -202,11 +230,46 @@ def search_open_library(q: str):
         )
     return books
 
+@app.patch("/books/update/{book_id}")
+def update_book(book_id: int, book_update: BookUpdate, _: dict = Depends(get_current_user),):
+
+    update_data = book_update.model_dump(exclude_unset=True)
+
+    if not update_data:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one field must be provided"
+        )
+
+    try:
+        updated_book = update_book_by_id(book_id, update_data)
+
+        if updated_book is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Book not found"
+            )
+
+        return updated_book
+
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="Could not update book due to a data conflict"
+        )
+
+
 
 @app.get("/books/never-borrowed")
 def books_never_borrowed():
     """Return books that have never been borrowed."""
     return get_never_borrowed_books()
+
+
+@app.get("/books/most-borrowed")
+def books_most_borrowed():
+    """Return the books that have been borrowed the most."""
+    return get_most_borrowed_books()
 
 
 @app.get("/books/{book_id}")
@@ -265,3 +328,27 @@ def return_book(loan_id: int, _: dict = Depends(get_current_user)):
 def get_all_registered_members(_: dict = Depends(get_current_user)):
     """Return all registered members"""
     return get_all_members()
+
+  
+@app.get("/members/{member_id}/loans/current")
+def get_current_loans(member_id: int, _: dict = Depends(get_current_user),):
+
+    member = get_member_by_id(member_id)
+    if member is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Member not found",
+        )
+
+    return get_member_current_loans(member_id)
+
+@app.get("/members/search")
+def filter_members(q: str, _: dict = Depends(get_current_user)):
+    """Search members by name or email. Multiple words allowed"""
+    words = q.split()
+    results = {}
+    for word in words:
+        for member in search_members(word):
+            results[member["member_id"]] = member
+
+    return list(results.values())
