@@ -31,7 +31,7 @@ from database import (
     get_overdue_loans,
     update_book_by_id, 
     get_member_by_id, 
-    get_member_current_loans
+    get_member_current_loans,
     search_members,
     delete_book,
     delete_member,
