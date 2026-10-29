@@ -17,19 +17,20 @@ from models import (
 )
 
 from database import (
-    get_all_catalogued_books, 
-    get_catalogued_book_by_id, 
-    get_all_members, 
-    add_member, 
+    get_all_catalogued_books,
+    get_catalogued_book_by_id,
+    get_all_members,
+    add_member,
     get_member_by_email,
     add_book,
     get_never_borrowed_books,
     get_most_borrowed_books,
-    delete_book,
     create_loan,
     get_loan_by_id,
     return_loan,
     update_book_by_id,
+    search_members,
+    delete_book,
     delete_member,
 )
 
@@ -318,3 +319,15 @@ def return_book(loan_id: int, _: dict = Depends(get_current_user)):
 def get_all_registered_members(_: dict = Depends(get_current_user)):
     """Return all registered members"""
     return get_all_members()
+
+
+@app.get("/members/search")
+def filter_members(q: str, _: dict = Depends(get_current_user)):
+    """Search members by name or email. Multiple words allowed"""
+    words = q.split()
+    results = {}
+    for word in words:
+        for member in search_members(word):
+            results[member["member_id"]] = member
+
+    return list(results.values())
