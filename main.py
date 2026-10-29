@@ -7,10 +7,22 @@ from pwdlib import PasswordHash
 
 import jwt
 from jwt.exceptions import InvalidTokenError
+
 from models import Member, LoginRequest, TokenResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from database import get_all_catalogued_books, get_catalogued_book_by_id, get_all_members, add_member, get_member_by_email, get_never_borrowed_books, delete_book
 
+from database import (
+    get_all_catalogued_books, 
+    get_catalogued_book_by_id, 
+    get_all_members, 
+    add_member, 
+    get_member_by_email,
+    add_book,
+    get_never_borrowed_books,
+    delete_book,
+)
+from models import Member, LoginRequest, TokenResponse, Book
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from database import (
     create_loan,
@@ -88,11 +100,7 @@ def get_current_user(
 import sqlite3
 from fastapi import HTTPException, Depends
 
-@app.post(
-    "/members/register",
-    status_code=201,
-    dependencies=[Depends(check_key)]
-)
+@app.post("/members/register", status_code=201, dependencies=[Depends(check_key)])
 def add_new_user(member: Member):
     try:
         hashed_password = password_hash.hash(member.password)
@@ -136,6 +144,33 @@ def login(member: LoginRequest):
     access_token = create_access_token(user["member_id"])
     print("✅ Login successful! Access token generated.")
     return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/books/add_new_book", status_code=201)
+def add_new_book(book: Book, _: dict = Depends(get_current_user)):
+    try:
+            new_book_id = add_book( title = book.title, author_name=book.author_name, publication_year=book.publication_year)
+            print(f"✅ Book '{book.title}' registered successfully! (201 Created)")
+    
+            return {
+                "book_id": new_book_id,
+                "title": book.title,
+                "author_name": book.author_name,
+                "publish_year": book.publication_year,
+            }
+    
+    except sqlite3.IntegrityError as error:
+        print(f"❌ Could not register book: {error}")
+        raise HTTPException(
+            status_code=409,
+            detail="Book already registered or invalid book data"
+    )
+    
+    except Exception as error:
+        print(f"❌ Error registering book: {error}")
+        raise HTTPException(
+            status_code=500,
+            detail="Could not register book"
+    )
 
 
 @app.get("/members/me", status_code=201)
