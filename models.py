@@ -31,8 +31,6 @@ class TokenResponse(BaseModel):
     token_type: str
 
 class LoanCreate(BaseModel):
-    """Create Loan using book_id and member_id"""
+    """Create Loan using book_id and logged in member"""
 
     book_id: int = Field(gt=0)
-    member_id: int = Field(gt=0)
-
