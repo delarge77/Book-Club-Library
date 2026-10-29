@@ -30,9 +30,11 @@ from database import (
     get_loan_by_id,
     return_loan,
     update_book_by_id,
+    delete_member,
 )
 
 from external_api import search_books
+
 
 load_dotenv()
 
@@ -180,6 +182,29 @@ def get_my_profile(current_user: dict = Depends(get_current_user)):
         "email": current_user["email"],
         "phone": current_user["phone"]
     }
+
+
+@app.delete(
+    "/members/{member_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(check_key)],
+)
+def remove_member(member_id: int) -> None:
+    """Delete a member who has no loan history."""
+    try:
+        deleted = delete_member(member_id)
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Member has loan history and cannot be removed",
+        )
+
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found",
+        )
+
 
 @app.get("/books")
 def get_catalogued_books():
