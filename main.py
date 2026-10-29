@@ -24,6 +24,7 @@ from database import (
     get_member_by_email,
     add_book,
     get_never_borrowed_books,
+    get_most_borrowed_books,
     delete_book,
     create_loan,
     get_loan_by_id,
@@ -236,6 +237,12 @@ def books_never_borrowed():
     return get_never_borrowed_books()
 
 
+@app.get("/books/most-borrowed")
+def books_most_borrowed():
+    """Return the books that have been borrowed the most."""
+    return get_most_borrowed_books()
+
+
 @app.get("/books/{book_id}")
 def get_catalogued_book(book_id: int):
     """Return one book using book_id"""
@@ -280,3 +287,9 @@ def return_book(loan_id: int, _: dict = Depends(get_current_user)):
         raise HTTPException(status_code=409, detail="Loan already returned")
     return_loan(loan_id)
     return {"loan_id": loan_id, "status": "returned"}
+
+
+@app.get("/members")
+def get_all_registered_members(_: dict = Depends(get_current_user)):
+    """Return all registered members"""
+    return get_all_members()
