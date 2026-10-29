@@ -3,13 +3,18 @@ from datetime import datetime, timedelta, timezone
 import sqlite3
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pwdlib import PasswordHash
-
 import jwt
 from jwt.exceptions import InvalidTokenError
-
-from models import Member, LoginRequest, TokenResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from models import ( 
+    Member, 
+    LoginRequest, 
+    TokenResponse, 
+    Book, 
+    BookUpdate, 
+    LoanCreate
+)
 
 from database import (
     get_all_catalogued_books, 
@@ -19,22 +24,17 @@ from database import (
     get_member_by_email,
     add_book,
     get_never_borrowed_books,
+    get_most_borrowed_books,
     delete_book,
-    delete_member,
-)
-from models import Member, LoginRequest, TokenResponse, Book
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
-from database import (
     create_loan,
-    get_all_catalogued_books,
-    get_catalogued_book_by_id,
-    get_member_by_id,
     get_loan_by_id,
     return_loan,
+    update_book_by_id,
+    delete_member,
 )
-from models import LoanCreate, Member
+
 from external_api import search_books
+
 
 load_dotenv()
 
@@ -156,7 +156,7 @@ def add_new_book(book: Book, _: dict = Depends(get_current_user)):
                 "book_id": new_book_id,
                 "title": book.title,
                 "author_name": book.author_name,
-                "publish_year": book.publication_year,
+                "publication_year": book.publication_year,
             }
     
     except sqlite3.IntegrityError as error:
@@ -226,11 +226,46 @@ def search_open_library(q: str):
         )
     return books
 
+@app.patch("/books/update/{book_id}")
+def update_book(book_id: int, book_update: BookUpdate, _: dict = Depends(get_current_user),):
+
+    update_data = book_update.model_dump(exclude_unset=True)
+
+    if not update_data:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one field must be provided"
+        )
+
+    try:
+        updated_book = update_book_by_id(book_id, update_data)
+
+        if updated_book is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Book not found"
+            )
+
+        return updated_book
+
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="Could not update book due to a data conflict"
+        )
+
+
 
 @app.get("/books/never-borrowed")
 def books_never_borrowed():
     """Return books that have never been borrowed."""
     return get_never_borrowed_books()
+
+
+@app.get("/books/most-borrowed")
+def books_most_borrowed():
+    """Return the books that have been borrowed the most."""
+    return get_most_borrowed_books()
 
 
 @app.get("/books/{book_id}")
@@ -253,26 +288,23 @@ def remove_book(book_id: int):
         raise HTTPException(status_code=404, detail="Book not found")
 
 
-@app.post("/loans", status_code=201, dependencies=[Depends(check_key)])
-def lend_book(loan: LoanCreate):
-    """Create a new loan using book_id and member_id"""
+@app.post("/loans", status_code=201)
+def lend_book(loan: LoanCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new loan using book_id and logged in user"""
     book = get_catalogued_book_by_id(loan.book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
-    member = get_member_by_id(loan.member_id)
-    if member is None:
-        raise HTTPException(status_code=404, detail="Member not found")
     try:
-        new_loan_id = create_loan(loan.book_id, loan.member_id)
+        new_loan_id = create_loan(loan.book_id, current_user["member_id"])
 
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=409, detail="Book is already on loan")
     return {"loan_id": new_loan_id}
 
 
-@app.patch("/loans/{loan_id}/return", dependencies=[Depends(check_key)])
-def return_book(loan_id: int):
-    """Return loan"""
+@app.patch("/loans/{loan_id}/return")
+def return_book(loan_id: int, _: dict = Depends(get_current_user)):
+    """Return loan - anyone that's logged in can return a loan"""
     loan = get_loan_by_id(loan_id)
     if loan is None:
         raise HTTPException(status_code=404, detail="Loan not found")
@@ -280,3 +312,9 @@ def return_book(loan_id: int):
         raise HTTPException(status_code=409, detail="Loan already returned")
     return_loan(loan_id)
     return {"loan_id": loan_id, "status": "returned"}
+
+
+@app.get("/members")
+def get_all_registered_members(_: dict = Depends(get_current_user)):
+    """Return all registered members"""
+    return get_all_members()

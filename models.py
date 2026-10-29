@@ -1,4 +1,4 @@
-from pydantic import Field, field_validator, BaseModel, EmailStr
+from pydantic import Field, field_validator, BaseModel, EmailStr, ConfigDict
 
 
 class Book(BaseModel):
@@ -6,6 +6,20 @@ class Book(BaseModel):
     title: str
     author_name: str
     publication_year: int | None = None
+
+class BookUpdate(BaseModel):
+    """Fields that can be updated on a book."""
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None = Field(default=None, min_length=1)
+    author_name: str | None = Field(default=None, min_length=1)
+    publication_year: int | None = None
+
+class ExternalBook(BaseModel):
+     """External API Model from Open Library"""
+     title: str
+     author_name: list[str]
+     first_publish_year: int | None = None
 
 
 class Member(BaseModel):
@@ -31,8 +45,6 @@ class TokenResponse(BaseModel):
     token_type: str
 
 class LoanCreate(BaseModel):
-    """Create Loan using book_id and member_id"""
+    """Create Loan using book_id and logged in member"""
 
     book_id: int = Field(gt=0)
-    member_id: int = Field(gt=0)
-
