@@ -252,3 +252,9 @@ def return_book(loan_id: int, _: dict = Depends(get_current_user)):
         raise HTTPException(status_code=409, detail="Loan already returned")
     return_loan(loan_id)
     return {"loan_id": loan_id, "status": "returned"}
+
+
+@app.get("/members")
+def get_all_registered_members(_: dict = Depends(get_current_user)):
+    """Return all registered members"""
+    return get_all_members()
