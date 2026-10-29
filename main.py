@@ -30,6 +30,7 @@ from database import (
     get_catalogued_book_by_id,
     get_loan_by_id,
     return_loan,
+    get_overdue_loans,
 )
 from models import LoanCreate, Member
 from external_api import search_books
@@ -240,6 +241,12 @@ def lend_book(loan: LoanCreate, current_user: dict = Depends(get_current_user)):
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=409, detail="Book is already on loan")
     return {"loan_id": new_loan_id}
+
+
+@app.get("/loans/overdue")
+def overdue_loans(_: dict = Depends(get_current_user)):
+    """Return loans that are past their due date and not returned."""
+    return get_overdue_loans()
 
 
 @app.patch("/loans/{loan_id}/return")
