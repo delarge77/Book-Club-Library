@@ -7,6 +7,12 @@ class Book(BaseModel):
     author_name: str
     publication_year: int | None = None
 
+class ExternalBook(BaseModel):
+     """External API Model from Open Library"""
+     title: str
+     author_name: list[str]
+     first_publish_year: int | None = None
+
 
 class Member(BaseModel):
     name: str = Field(min_length=5)
@@ -31,8 +37,6 @@ class TokenResponse(BaseModel):
     token_type: str
 
 class LoanCreate(BaseModel):
-    """Create Loan using book_id and member_id"""
+    """Create Loan using book_id and logged in member"""
 
     book_id: int = Field(gt=0)
-    member_id: int = Field(gt=0)
-

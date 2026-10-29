@@ -29,7 +29,6 @@ from database import (
     create_loan,
     get_all_catalogued_books,
     get_catalogued_book_by_id,
-    get_member_by_id,
     get_loan_by_id,
     return_loan,
 )
@@ -156,7 +155,7 @@ def add_new_book(book: Book, _: dict = Depends(get_current_user)):
                 "book_id": new_book_id,
                 "title": book.title,
                 "author_name": book.author_name,
-                "publish_year": book.publication_year,
+                "publication_year": book.publication_year,
             }
     
     except sqlite3.IntegrityError as error:
@@ -236,26 +235,23 @@ def remove_book(book_id: int):
         raise HTTPException(status_code=404, detail="Book not found")
 
 
-@app.post("/loans", status_code=201, dependencies=[Depends(check_key)])
-def lend_book(loan: LoanCreate):
-    """Create a new loan using book_id and member_id"""
+@app.post("/loans", status_code=201)
+def lend_book(loan: LoanCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new loan using book_id and logged in user"""
     book = get_catalogued_book_by_id(loan.book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
-    member = get_member_by_id(loan.member_id)
-    if member is None:
-        raise HTTPException(status_code=404, detail="Member not found")
     try:
-        new_loan_id = create_loan(loan.book_id, loan.member_id)
+        new_loan_id = create_loan(loan.book_id, current_user["member_id"])
 
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=409, detail="Book is already on loan")
     return {"loan_id": new_loan_id}
 
 
-@app.patch("/loans/{loan_id}/return", dependencies=[Depends(check_key)])
-def return_book(loan_id: int):
-    """Return loan"""
+@app.patch("/loans/{loan_id}/return")
+def return_book(loan_id: int, _: dict = Depends(get_current_user)):
+    """Return loan - anyone that's logged in can return a loan"""
     loan = get_loan_by_id(loan_id)
     if loan is None:
         raise HTTPException(status_code=404, detail="Loan not found")
