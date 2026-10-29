@@ -204,6 +204,23 @@ def get_member_by_id(member_id: int) -> dict | None:
     return dict(row) if row is not None else None
 
 
+def delete_member(member_id: int) -> bool:
+    """Delete a member by ID.
+
+    Return True if the member was deleted, or False if not found.
+    """
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            DELETE FROM members
+            WHERE member_id = ?
+            """,
+            (member_id,),
+        )
+
+    return cursor.rowcount > 0
+
+
 def add_book(title: str, author_name: str, publication_year: int ) -> int:
     """Insert a new bookd and return their ID."""
     with get_connection() as connection:
