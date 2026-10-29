@@ -20,6 +20,7 @@ from database import (
     add_book,
     get_never_borrowed_books,
     delete_book,
+    get_most_borrowed_books,
 )
 from models import Member, LoginRequest, TokenResponse, Book
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -206,6 +207,12 @@ def search_open_library(q: str):
 def books_never_borrowed():
     """Return books that have never been borrowed."""
     return get_never_borrowed_books()
+
+
+@app.get("/books/most-borrowed")
+def books_most_borrowed():
+    """Return the books that have been borrowed the most."""
+    return get_most_borrowed_books()
 
 
 @app.get("/books/{book_id}")

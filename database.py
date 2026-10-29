@@ -114,6 +114,27 @@ def get_never_borrowed_books() -> list[dict]:
     return [dict(row) for row in rows]
 
 
+def get_most_borrowed_books() -> list[dict]:
+    """Return the books that have been borrowed the most."""
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                books.book_id,
+                books.title,
+                COUNT(loans.loan_id) AS loan_count
+            FROM books
+            JOIN loans
+                ON loans.book_id = books.book_id
+            GROUP BY books.book_id, books.title
+            ORDER BY loan_count DESC, books.title
+            LIMIT 10
+            """
+        ).fetchall()
+
+    return [dict(row) for row in rows]
+
+
 def create_loan(book_id: int, member_id: int):
     """Create loan entry using book ID and member ID"""
     loan_date = date.today().isoformat()
