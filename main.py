@@ -213,9 +213,9 @@ def remove_member(member_id: int) -> None:
 
 
 @app.get("/books")
-def get_catalogued_books():
-    """Return all books in the library catalogue."""
-    return get_all_catalogued_books()
+def get_catalogued_books(author_name: str | None = None):
+    """Return all books, or only books by a matching author."""
+    return get_all_catalogued_books(author_name)
 
 
 @app.get("/books/search")
