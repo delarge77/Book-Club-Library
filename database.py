@@ -16,19 +16,37 @@ def get_connection() -> sqlite3.Connection:
     return connection
 
 
-def get_all_catalogued_books() -> list[dict]:
-    """Return all catalogued books."""
+def get_all_catalogued_books(author_name: str | None = None) -> list[dict]:
+    """Return all catalogued books or only books by a matching author."""
     with get_connection() as connection:
-        rows = connection.execute(
-            """
-            SELECT
-                book_id,
-                title,
-                publication_year
-            FROM books
-            ORDER BY title
-            """
-        ).fetchall()
+        if author_name is None:
+            rows = connection.execute(
+                """
+                SELECT
+                    book_id,
+                    title,
+                    publication_year
+                FROM books
+                ORDER BY title
+                """
+            ).fetchall()
+        else:
+            rows = connection.execute(
+                """
+                SELECT DISTINCT
+                    books.book_id,
+                    books.title,
+                    books.publication_year
+                FROM books
+                JOIN book_authors
+                    ON book_authors.book_id = books.book_id
+                JOIN authors
+                    ON authors.author_id = book_authors.author_id
+                WHERE authors.name LIKE ?
+                ORDER BY books.title
+                """,
+                (f"%{author_name}%",),
+            ).fetchall()
 
     return [dict(row) for row in rows]
 
