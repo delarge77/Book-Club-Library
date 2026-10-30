@@ -36,7 +36,7 @@ class Member(BaseModel):
 class MemberUpdate(BaseModel):
     """Fields that can be updated on a member."""
     email: EmailStr
-    phone: str | None = None
+    phone: str
     @field_validator("email", "phone", mode="before")
     @classmethod
     def reject_empty_or_whitespace(cls, value):

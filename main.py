@@ -374,8 +374,13 @@ def update_member(member_id: int, member_update: MemberUpdate, _: dict = Depends
                 status_code=404,
                 detail="Member not found"
             )
+        
+        member = {"member_id":updated_member["member_id"], "name":updated_member["name"],
+                  "email":updated_member["email"], "phone":updated_member["phone"],
+                  "message":"User updated sucessfully"}
 
-        return updated_member
+
+        return member
 
     except sqlite3.IntegrityError:
         raise HTTPException(
