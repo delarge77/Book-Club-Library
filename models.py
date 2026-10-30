@@ -9,8 +9,6 @@ class Book(BaseModel):
 
 class BookUpdate(BaseModel):
     """Fields that can be updated on a book."""
-    model_config = ConfigDict(extra="forbid")
-
     title: str | None = Field(default=None, min_length=1)
     author_name: str | None = Field(default=None, min_length=1)
     publication_year: int | None = None
@@ -35,6 +33,17 @@ class Member(BaseModel):
             raise ValueError("This field cannot be empty")
         return value
 
+class MemberUpdate(BaseModel):
+    """Fields that can be updated on a member."""
+    email: EmailStr
+    phone: str | None = None
+    @field_validator("email", "phone", mode="before")
+    @classmethod
+    def reject_empty_or_whitespace(cls, value):
+        if isinstance(value, str) and not value.strip():
+            raise ValueError("This field cannot be empty")
+        return value
+    
 
 class LoginRequest(BaseModel):
     email: EmailStr

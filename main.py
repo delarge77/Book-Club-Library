@@ -13,7 +13,8 @@ from models import (
     TokenResponse, 
     Book, 
     BookUpdate, 
-    LoanCreate
+    LoanCreate,
+    MemberUpdate
 )
 
 from database import (
@@ -35,6 +36,7 @@ from database import (
     search_members,
     delete_book,
     delete_member,
+    update_member_contact_by_id,
 )
 
 from external_api import search_books
@@ -352,3 +354,31 @@ def filter_members(q: str, _: dict = Depends(get_current_user)):
             results[member["member_id"]] = member
 
     return list(results.values())
+
+@app.patch("/members/update_contact/{member_id}")
+def update_member(member_id: int, member_update: MemberUpdate, _: dict = Depends(get_current_user),):
+
+    update_data = member_update.model_dump(exclude_unset=True)
+
+    if not update_data:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one field must be provided"
+        )
+
+    try:
+        updated_member = update_member_contact_by_id(member_id, update_data)
+
+        if updated_member is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Member not found"
+            )
+
+        return updated_member
+
+    except sqlite3.IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="Could not update member due to a data conflict"
+        )

@@ -337,3 +337,47 @@ def get_member_current_loans(member_id: int) -> list[dict]:
         ).fetchall()
 
     return [dict(row) for row in rows]
+
+def update_member_contact_by_id(member_id: int, update_data: dict) -> dict | None:
+
+    allowed_fields = {
+        "email",
+        "phone",
+    }
+
+    update_data = {
+        key: value
+        for key, value in update_data.items()
+        if key in allowed_fields
+    }
+
+    if not update_data:
+        return None
+
+    with get_connection() as connection:
+        # Check whether the member exists.
+        existing_member = connection.execute(
+            "SELECT member_id FROM members WHERE member_id = ?",
+            (member_id,)
+        ).fetchone()
+
+        if existing_member is None:
+            return None
+
+        # Update only the supplied fields.
+        fields = ", ".join(
+            f"{field} = ?" for field in update_data
+        )
+        values = list(update_data.values()) + [member_id]
+
+        connection.execute(
+            f"UPDATE members SET {fields} WHERE member_id = ?",
+            values
+        )
+
+        row = connection.execute(
+            "SELECT * FROM members WHERE member_id = ?",
+            (member_id,)
+        ).fetchone()
+
+        return dict(row)
