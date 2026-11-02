@@ -245,6 +245,38 @@ def get_member_by_id(member_id: int) -> dict | None:
 
     return dict(row) if row is not None else None
 
+def get_member_loan_history(
+    member_id: int,
+) -> list[dict]:
+    """Return active and returned loans for a member."""
+
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                loans.loan_id,
+                loans.book_id,
+                books.title,
+                books.author_name,
+                loans.loan_date,
+                loans.due_date,
+                loans.return_date
+            FROM loans
+            JOIN books
+                ON books.book_id = loans.book_id
+            WHERE loans.member_id = ?
+            ORDER BY
+                loans.loan_date DESC,
+                loans.loan_id DESC
+            """,
+            (member_id,),
+        ).fetchall()
+
+    return [
+        dict(row)
+        for row in rows
+    ]
+
 
 def delete_member(member_id: int) -> bool:
     """Delete a member by ID.
