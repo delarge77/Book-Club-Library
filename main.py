@@ -314,7 +314,7 @@ def overdue_loans(_: dict = Depends(get_current_user)):
     return get_overdue_loans()
 
 
-@app.patch("/loans/{loan_id}/return")
+@app.put("/loans/{loan_id}/return")
 def return_book(loan_id: int, _: dict = Depends(get_current_user)):
     """Return loan - anyone that's logged in can return a loan"""
     loan = get_loan_by_id(loan_id)
