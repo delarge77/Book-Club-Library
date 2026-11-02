@@ -314,7 +314,7 @@ def overdue_loans(_: dict = Depends(get_current_user)):
     return get_overdue_loans()
 
 
-@app.patch("/loans/{loan_id}/return")
+@app.put("/loans/{loan_id}/return")
 def return_book(loan_id: int, _: dict = Depends(get_current_user)):
     """Return loan - anyone that's logged in can return a loan"""
     loan = get_loan_by_id(loan_id)
@@ -374,8 +374,13 @@ def update_member(member_id: int, member_update: MemberUpdate, _: dict = Depends
                 status_code=404,
                 detail="Member not found"
             )
+        
+        member = {"member_id":updated_member["member_id"], "name":updated_member["name"],
+                  "email":updated_member["email"], "phone":updated_member["phone"],
+                  "message":"User updated sucessfully"}
 
-        return updated_member
+
+        return member
 
     except sqlite3.IntegrityError:
         raise HTTPException(
