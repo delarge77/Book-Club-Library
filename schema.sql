@@ -43,7 +43,7 @@ CREATE TABLE loans (
     loan_id INTEGER PRIMARY KEY,
     book_id INTEGER NOT NULL,
     member_id INTEGER NOT NULL,
-    loan_date TEXT NOT NULL,
+    loan_date TEXT NOT NULL DEFAULT CURRENT_DATE,
     due_date TEXT NOT NULL,
     return_date TEXT,
 
