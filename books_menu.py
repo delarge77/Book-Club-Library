@@ -19,9 +19,13 @@ def show_user_menu():
     print("1. List books")
     print("2. Show one book")
     print("3. Add new book")
+    print("4. Delete book")
+    print("5. Update book")
+    print("6. Show my member info")
+    print("7. Update my contact info")
+    print("8. Show most borrowed books")
     print("0. Log out")
     print(" ")
-
 
 def list_books():
     """list all catalogued books"""
@@ -102,6 +106,14 @@ def delete_book(headers):
             print("Please type a number.")
         else:
             break
+    book = get_json(f"{BASE_URL}/books/{book_id}")
+    if book is None:
+        return
+    confirm = input(f"Delete {book['title']}? y/n ").strip().lower()
+    if confirm != "y":
+        print("Cancelled")
+        return
+
     try:
         response = requests.delete(
             f"{BASE_URL}/books/{book_id}",
@@ -145,11 +157,13 @@ def logged_in_menu(token):
             show_book()
         elif choice == "3":
             add_new_book(headers)
+        elif choice == "4":
+            delete_book(headers)
         elif choice == "0":
             print("Logging out. Bye!")
             break
         else:
-            print("Please choose 1, 2, 3 or 0")
+            print("Please choose a number from the menu")
 
 
 if __name__ == "__main__":
