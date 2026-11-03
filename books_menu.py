@@ -8,7 +8,7 @@ load_dotenv()
 API_KEY = os.getenv("API_KEY")
 
 BASE_URL = "http://127.0.0.1:8000"
-BOOK_INFO = "book_id: {book_id} | title: {title} | year: {publication_year}"
+BOOK_INFO = "book_id: {book_id} | name: {title} | year: {publication_year}"
 
 
 def show_user_menu():
@@ -53,16 +53,9 @@ def add_new_book(headers):
 
     title = input("Book title : ").strip()
     author_name = input("Author Name : ").strip()
-    while True:
-        publication_year = input("Publication year : ").strip()
-        if publication_year == "":
-            publication_year = None
-            break
-        try:
-            publication_year = int(publication_year)
-            break
-        except ValueError:
-            print("Please type a number, or press Enter to skip.")
+    publication_year = input("Publication year : ").strip() or None
+    if publication_year is not None:
+        publication_year = int(publication_year)
 
     try:
         response = requests.post(
@@ -82,11 +75,7 @@ def add_new_book(headers):
         print("The server is too slow to answer. Try again later.")
         return
 
-    try:
-        data = response.json()
-    except requests.exceptions.JSONDecodeError:
-        print("Error:", response.status_code)
-        return
+    data = response.json()
     if response.status_code == 201:
         print("Book added!")
         if publication_year is not None:
@@ -100,6 +89,7 @@ def add_new_book(headers):
         print("Please check title and author")
     else:
         print("Error:", response.status_code, data["detail"])
+
 
 # delete book
 def delete_book(headers):
@@ -118,12 +108,22 @@ def delete_book(headers):
             headers=headers,
             timeout=5,
         )
+
     except requests.exceptions.ConnectionError:
         print("Cannot reach the server. Is the API running?")
         return
     except requests.exceptions.Timeout:
         print("The server is too slow to answer. Try again later.")
+
         return
+    if response.status_code == 204:
+        print("Book deleted")
+    elif response.status_code == 404:
+        print("Book cant be found")
+    elif response.status_code == 409:
+        print("Book has loans and can not be deleted")
+    else:
+        print("Error:", response.status_code)
 
 
 # show member information
