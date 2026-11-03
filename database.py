@@ -50,7 +50,7 @@ def get_all_catalogued_books(author_name: str | None = None) -> list[dict]:
 
     return [dict(row) for row in rows]
 
-def get_all_members() -> list[dict]:
+def get_all_active_members() -> list[dict]:
     """Return all members."""
     with get_connection() as connection:
             rows = connection.execute(
@@ -59,8 +59,10 @@ def get_all_members() -> list[dict]:
                     member_id,
                     name,
                     email,
-                    phone
+                    phone,
+                    is_active
                 FROM members
+                WHERE is_active = 1
                 """
             ).fetchall()
 
@@ -76,7 +78,8 @@ def search_members(q: str) -> list[dict]:
                     member_id,
                     name,
                     email,
-                    phone
+                    phone,
+                    is_active
                 FROM members
                 WHERE name LIKE ? OR email LIKE ?
                 """,
@@ -104,7 +107,7 @@ def get_member_by_email(email: str) -> dict | None:
     with get_connection() as connection:
         row = connection.execute(
             """
-            SELECT member_id, name, email, phone, password_hash
+            SELECT member_id, name, email, phone, is_active ,password_hash
             FROM members
             WHERE email = ?
             """,
@@ -279,18 +282,63 @@ def get_member_loan_history(
 
 
 def delete_member(member_id: int) -> bool:
-    """Delete a member by ID.
+    """Delete a member without loans or anonymise a member with loan history."""
 
-    Return True if the member was deleted, or False if not found.
-    """
     with get_connection() as connection:
+
+        # Check for active loans
         cursor = connection.execute(
             """
-            DELETE FROM members
+            SELECT COUNT(*)
+            FROM loans
+            WHERE member_id = ?
+            AND return_date IS NULL
+            """,
+            (member_id,),
+        )
+
+        active_loans = cursor.fetchone()[0]
+
+        if active_loans > 0:
+            raise sqlite3.IntegrityError(
+                "Member has active loans"
+            )
+
+        # Check whether the member has any loan history
+        cursor = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM loans
             WHERE member_id = ?
             """,
             (member_id,),
         )
+
+        loan_history = cursor.fetchone()[0]
+
+        if loan_history > 0:
+            # Anonymise member
+            cursor = connection.execute(
+                """
+                UPDATE members
+                SET
+                    name = 'Former member',
+                    email = ?,
+                    phone = NULL,
+                    is_active = 0
+                WHERE member_id = ?
+                """,
+                (f"deleted+{member_id}@invalid.local", member_id),
+            )
+        else:
+            # No loan history: permanently delete
+            cursor = connection.execute(
+                """
+                DELETE FROM members
+                WHERE member_id = ?
+                """,
+                (member_id,),
+            )
 
     return cursor.rowcount > 0
 
