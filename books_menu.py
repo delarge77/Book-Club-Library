@@ -44,7 +44,7 @@ def show_user_menu():
     print("4. Delete book")
     print("5. Update book")
     print("6. Show my member info")
-    # print("7. Update my contact info")
+    print("7. Update my contact info")
     # print("8. Show most borrowed books")
     print("9. Import from Open Library")
     print("0. Log out")
@@ -274,7 +274,6 @@ def update_book(headers):
         print("Error:", response.status_code, data["detail"])
 
 
-# show member information
 def show_my_info(headers):
     """Show logged in members info"""
 
@@ -284,9 +283,47 @@ def show_my_info(headers):
     profile = member_info["profile"]
     print(MEMBER_INFO.format_map(profile))
 
+def update_my_contact(headers):
+    """Update your contact info as logged in"""
 
-# show atleast one memberstatistics endpoint
-# errors from the api with clear message
+    member_info = get_json(f"{BASE_URL}/members/me", headers=headers)
+    if member_info is None:
+        return
+    profile = member_info["profile"]
+    email = input(f"New email ({profile['email']}): ").strip() or profile["email"]
+    phone = (
+        input(f"New phone number ({profile['phone']}): ").strip() or profile["phone"]
+    )
+    try:
+        response = requests.patch(
+            f"{BASE_URL}/members/update_contact/{profile['member_id']}",
+            json={"email": email, "phone": phone},
+            headers=headers,
+            timeout=5,
+        )
+    except requests.exceptions.ConnectionError:
+        print("Cannot reach the server. Is the API running?")
+        return
+    except requests.exceptions.Timeout:
+        print("The server is too slow to answer. Try again later.")
+        return
+
+    try:
+        data = response.json()
+    except requests.exceptions.JSONDecodeError:
+        print("Error:", response.status_code)
+        return
+    if response.status_code == 200:
+        print("Contact updated!")
+        print(MEMBER_INFO.format_map(data))
+    elif response.status_code == 409:
+        print("Could not update email (data conflict)")
+    elif response.status_code == 422:
+        print("Please check input")
+    elif response.status_code == 401:
+        print("Not logged in or your session has expired. Log in again.")
+    else:
+        print("Error:", response.status_code, data["detail"])
 
 
 def logged_in_menu(token):
@@ -309,6 +346,8 @@ def logged_in_menu(token):
             update_book(headers)
         elif choice == "6":
             show_my_info(headers)
+        elif choice == "7":
+            update_my_contact(headers)
         elif choice == "9":
             import_book(headers)
         elif choice == "0":
