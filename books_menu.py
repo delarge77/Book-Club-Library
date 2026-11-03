@@ -9,6 +9,7 @@ API_KEY = os.getenv("API_KEY")
 
 BASE_URL = "http://127.0.0.1:8000"
 BOOK_INFO = "book_id: {book_id} | title: {title} | year: {publication_year}"
+MEMBER_INFO = "member_id: {member_id} | name: {name} | email: {email} | phone: {phone}"
 
 def ask_book_id():
     """Ask for a book_id."""
@@ -40,7 +41,7 @@ def show_user_menu():
     print("3. Add new book")
     print("4. Delete book")
     print("5. Update book")
-    # print("6. Show my member info")
+    print("6. Show my member info")
     # print("7. Update my contact info")
     # print("8. Show most borrowed books")
     print("0. Log out")
@@ -48,6 +49,7 @@ def show_user_menu():
 
 def list_books():
     """list all catalogued books"""
+
     books = get_json(f"{BASE_URL}/books")
     if books is None:
         return
@@ -108,6 +110,7 @@ def add_new_book(headers):
     else:
         print("Error:", response.status_code, data["detail"])
 
+
 def delete_book(headers):
     """delete book using book_id"""
     print("Delete book")
@@ -144,7 +147,6 @@ def delete_book(headers):
         print("Error:", response.status_code)
 
 
-# update book
 def update_book(headers):
     """update book by book_id"""
 
@@ -200,6 +202,16 @@ def update_book(headers):
 
 
 # show member information
+def show_my_info(headers):
+    """Show logged in members info"""
+
+    member_info = get_json(f"{BASE_URL}/members/me", headers=headers)
+    if member_info is None:
+        return
+    profile = member_info["profile"]
+    print(MEMBER_INFO.format_map(profile))
+
+
 # show atleast one memberstatistics endpoint
 # errors from the api with clear message
 
@@ -222,6 +234,8 @@ def logged_in_menu(token):
             delete_book(headers)
         elif choice == "5":
             update_book(headers)
+        elif choice == "6":
+            show_my_info(headers)
         elif choice == "0":
             print("Logging out. Bye!")
             break
