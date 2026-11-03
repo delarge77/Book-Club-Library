@@ -43,6 +43,7 @@ def show_user_menu():
     # print("6. Show my member info")
     # print("7. Update my contact info")
     # print("8. Show most borrowed books")
+    print("9. Import from Open Library")
     print("0. Log out")
     print(" ")
 
@@ -107,6 +108,76 @@ def add_new_book(headers):
         print("Please check title and author")
     else:
         print("Error:", response.status_code, data["detail"])
+
+
+def search_open_library():
+    """Search Open Library and print the results as a numbered list."""
+    query = input("Search Open Library: ").strip()
+    if not query:
+        print("Please type something to search for.")
+        return None
+
+    books = get_json(f"{BASE_URL}/books/search", params={"q": query}, timeout=10)
+    if not books:
+        print("No books found.")
+        return None
+
+    for number, book in enumerate(books, start=1):
+        authors = ", ".join(book["author_name"])
+        print(f"{number}. {book['title']} by {authors} ({book['first_publish_year']})")
+    return books
+
+
+def choose_book(books):
+    """Ask for a number and return that book, or None to cancel."""
+    while True:
+        choice = input("Pick a number to import (Enter to cancel): ").strip()
+        if choice == "":
+            return None
+        try:
+            number = int(choice)
+        except ValueError:
+            print("Please type a number.")
+            continue
+        if 1 <= number <= len(books):
+            return books[number - 1]
+        print(f"Please choose 1 to {len(books)}.")
+
+
+def import_book(headers):
+    """Search Open Library, pick a book and import it."""
+    books = search_open_library()
+    if not books:
+        return
+    book = choose_book(books)
+    if book is None:
+        print("Import cancelled.")
+        return
+
+    try:
+        response = requests.post(
+            f"{BASE_URL}/books/import",
+            json=book,
+            headers=headers,
+            timeout=5,
+        )
+    except requests.exceptions.ConnectionError:
+        print("Cannot reach the server. Is the API running?")
+        return
+    except requests.exceptions.Timeout:
+        print("The server is too slow to answer. Try again later.")
+        return
+
+    if response.status_code == 201:
+        data = response.json()
+        print(f"Imported! '{data['title']}' has book_id {data['book_id']}")
+    elif response.status_code == 409:
+        print("This book is already in the library.")
+    elif response.status_code == 401:
+        print("Please log in again.")
+    else:
+        print("Error:", response.status_code)
+
 
 def delete_book(headers):
     """delete book using book_id"""
@@ -222,6 +293,8 @@ def logged_in_menu(token):
             delete_book(headers)
         elif choice == "5":
             update_book(headers)
+        elif choice == "9":
+            import_book(headers)
         elif choice == "0":
             print("Logging out. Bye!")
             break
