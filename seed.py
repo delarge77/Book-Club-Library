@@ -104,7 +104,7 @@ def seed_members(connection) -> None:
     connection.executemany(
         """
         INSERT INTO members (name, email, phone, password_hash)
-        VALUES (?, ?, ?,?)
+        VALUES (?, ?, ?, ?)
         """,
         MEMBERS,
     )
