@@ -1,6 +1,7 @@
 import os
 import requests
 from dotenv import load_dotenv
+from books_menu import logged_in_menu
 
 load_dotenv()
 
@@ -113,6 +114,8 @@ def main():
             register()
         elif choice == "2":
             token = login()
+            if token is not None:
+                logged_in_menu(token)
         elif choice == "0":
             print("Bye!")
             break

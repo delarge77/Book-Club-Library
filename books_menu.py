@@ -1,4 +1,5 @@
 import os
+import requests
 from dotenv import load_dotenv
 from api_client import get_json
 
@@ -17,6 +18,7 @@ def show_user_menu():
     print(" ")
     print("1. List books")
     print("2. Show one book")
+    print("3. Add new book")
     print("0. Log out")
     print(" ")
 
@@ -46,13 +48,47 @@ def show_book():
     print(BOOK_INFO.format_map(book))
 
 
-# add book
+def add_new_book(headers):
+    """Ask for book details to add new book."""
 
+    title = input("Book title : ").strip()
+    author_name = input("Author Name : ").strip()
+    publication_year = input("Publication year : ").strip() or None
+    if publication_year is not None:
+        publication_year = int(publication_year)
 
-def add_book():
-    """add book to catalogue"""
-    books = get_json(f"{BASE_URL}/books/add_new/book")
+    try:
+        response = requests.post(
+            f"{BASE_URL}/books/add_new_book",
+            json={
+                "title": title,
+                "author_name": author_name,
+                "publication_year": publication_year,
+            },
+            headers=headers,
+            timeout=5,
+        )
+    except requests.exceptions.ConnectionError:
+        print("Cannot reach the server. Is the API running?")
+        return
+    except requests.exceptions.Timeout:
+        print("The server is too slow to answer. Try again later.")
+        return
 
+    data = response.json()
+    if response.status_code == 201:
+        print("Book added!")
+        if publication_year is not None:
+            success_message = f"{title} by {author_name} from {publication_year} with id: {data['book_id']}"
+        else:
+            success_message = f"{title} by {author_name} with id: {data['book_id']}"
+        print(success_message)
+    elif response.status_code == 409:
+        print("Book already exists")
+    elif response.status_code == 422:
+        print("Please check title and author")
+    else:
+        print("Error:", response.status_code, data["detail"])
 
 # delete book
 # show member information
@@ -72,11 +108,13 @@ def logged_in_menu(token):
             list_books()
         elif choice == "2":
             show_book()
+        elif choice == "3":
+            add_new_book(headers)
         elif choice == "0":
             print("Logging out. Bye!")
             break
         else:
-            print("Please choose 1, 2 or 0")
+            print("Please choose 1, 2, 3 or 0")
 
 
 if __name__ == "__main__":
