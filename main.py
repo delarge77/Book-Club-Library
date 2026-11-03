@@ -187,15 +187,20 @@ def add_new_book(book: Book, _: dict = Depends(get_current_user)):
             detail="Could not register book"
     )
 
+@app.get(
+    "/members/me",
+    response_model=MemberPersonalDataResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_my_profile(
+    current_user: dict = Depends(get_current_user),
+):
+    """Return the authenticated member's profile and loans."""
 
+    member_id = current_user["member_id"]
+    loans = get_member_loan_history(member_id)
 
-    
-@app.get("/members/me", status_code=201)
-def get_my_profile(current_user: dict = Depends(get_current_user)):
-   """Return the authenticated member's profile and loans."""
-   member_id = current_user["member_id"]
-   loans = get_member_loan_history(member_id)
-   return {
+    return {
         "profile": {
             "member_id": member_id,
             "name": current_user["name"],
@@ -211,13 +216,15 @@ def get_my_profile(current_user: dict = Depends(get_current_user)):
     dependencies=[Depends(check_key)],
 )
 def remove_member(member_id: int) -> None:
-    """Delete a member who has no loan history."""
+    """Remove or anonymise a member."""
+
     try:
         deleted = delete_member(member_id)
+
     except sqlite3.IntegrityError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Member has loan history and cannot be removed",
+            detail="Member has active loans and cannot be removed.",
         )
 
     if not deleted:

@@ -282,21 +282,63 @@ def get_member_loan_history(
 
 
 def delete_member(member_id: int) -> bool:
-    """Anonymize a member and deactivate their account."""
+    """Delete a member without loans or anonymise a member with loan history."""
 
     with get_connection() as connection:
+
+        # Check for active loans
         cursor = connection.execute(
             """
-            UPDATE members
-            SET
-                name = 'Former member',
-                email = ?,
-                phone = NULL,
-                is_active = 0
+            SELECT COUNT(*)
+            FROM loans
+            WHERE member_id = ?
+            AND return_date IS NULL
+            """,
+            (member_id,),
+        )
+
+        active_loans = cursor.fetchone()[0]
+
+        if active_loans > 0:
+            raise sqlite3.IntegrityError(
+                "Member has active loans"
+            )
+
+        # Check whether the member has any loan history
+        cursor = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM loans
             WHERE member_id = ?
             """,
-            (f"deleted+{member_id}@invalid.local", member_id),
+            (member_id,),
         )
+
+        loan_history = cursor.fetchone()[0]
+
+        if loan_history > 0:
+            # Anonymise member
+            cursor = connection.execute(
+                """
+                UPDATE members
+                SET
+                    name = 'Former member',
+                    email = ?,
+                    phone = NULL,
+                    is_active = 0
+                WHERE member_id = ?
+                """,
+                (f"deleted+{member_id}@invalid.local", member_id),
+            )
+        else:
+            # No loan history: permanently delete
+            cursor = connection.execute(
+                """
+                DELETE FROM members
+                WHERE member_id = ?
+                """,
+                (member_id,),
+            )
 
     return cursor.rowcount > 0
 
