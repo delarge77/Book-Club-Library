@@ -20,6 +20,38 @@ class ExternalBook(BaseModel):
      first_publish_year: int | None = None
 
 
+class ExternalBookImport(BaseModel):
+    """A selected Open Library result to import."""
+
+    title: str = Field(min_length=1)
+    author_name: list[str] = Field(min_length=1)
+    first_publish_year: int | None = Field(
+        default=None,
+        gt=0,
+    )
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def normalize_title(cls, value):
+        """Strip the title and reject whitespace-only values."""
+        if isinstance(value, str):
+            value = value.strip()
+
+            if not value:
+                raise ValueError("Title cannot be empty")
+
+        return value
+
+    @field_validator("author_name", mode="before")
+    @classmethod
+    def require_authors(cls, value):
+        """Require at least one author from Open Library."""
+        if not value:
+            raise ValueError("At least one author is required")
+
+        return value
+
+
 class Member(BaseModel):
     name: str = Field(min_length=5)
     email: EmailStr
