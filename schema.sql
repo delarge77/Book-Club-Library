@@ -36,6 +36,7 @@ CREATE TABLE members (
     name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     phone TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
     password_hash TEXT NOT NULL
 );
 

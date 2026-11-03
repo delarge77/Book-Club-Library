@@ -20,6 +20,38 @@ class ExternalBook(BaseModel):
      first_publish_year: int | None = None
 
 
+class ExternalBookImport(BaseModel):
+    """A selected Open Library result to import."""
+
+    title: str = Field(min_length=1)
+    author_name: list[str] = Field(min_length=1)
+    first_publish_year: int | None = Field(
+        default=None,
+        gt=0,
+    )
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def normalize_title(cls, value):
+        """Strip the title and reject whitespace-only values."""
+        if isinstance(value, str):
+            value = value.strip()
+
+            if not value:
+                raise ValueError("Title cannot be empty")
+
+        return value
+
+    @field_validator("author_name", mode="before")
+    @classmethod
+    def require_authors(cls, value):
+        """Require at least one author from Open Library."""
+        if not value:
+            raise ValueError("At least one author is required")
+
+        return value
+
+
 class Member(BaseModel):
     name: str = Field(min_length=5)
     email: EmailStr
@@ -43,6 +75,35 @@ class MemberUpdate(BaseModel):
         if isinstance(value, str) and not value.strip():
             raise ValueError("This field cannot be empty")
         return value
+
+class MemberLoanResponse(BaseModel):
+    """A loan included in a member's personal data."""
+
+    loan_id: int
+    book_id: int
+    title: str
+    author_name: str
+    loan_date: str
+    due_date: str
+    return_date: str | None = None
+
+
+class MemberProfileResponse(BaseModel):
+    """Profile data stored about a library member."""
+
+    member_id: int
+    name: str
+    email: EmailStr
+    phone: str | None = None
+
+
+class MemberPersonalDataResponse(BaseModel):
+    """Profile and loan data stored about a library member."""
+
+    profile: MemberProfileResponse
+    loans: list[MemberLoanResponse] = Field(
+        default_factory=list
+    )
     
 
 class LoginRequest(BaseModel):

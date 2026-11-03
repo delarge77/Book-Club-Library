@@ -50,7 +50,7 @@ def get_all_catalogued_books(author_name: str | None = None) -> list[dict]:
 
     return [dict(row) for row in rows]
 
-def get_all_members() -> list[dict]:
+def get_all_active_members() -> list[dict]:
     """Return all members."""
     with get_connection() as connection:
             rows = connection.execute(
@@ -59,8 +59,10 @@ def get_all_members() -> list[dict]:
                     member_id,
                     name,
                     email,
-                    phone
+                    phone,
+                    is_active
                 FROM members
+                WHERE is_active = 1
                 """
             ).fetchall()
 
@@ -76,7 +78,8 @@ def search_members(q: str) -> list[dict]:
                     member_id,
                     name,
                     email,
-                    phone
+                    phone,
+                    is_active
                 FROM members
                 WHERE name LIKE ? OR email LIKE ?
                 """,
@@ -104,7 +107,7 @@ def get_member_by_email(email: str) -> dict | None:
     with get_connection() as connection:
         row = connection.execute(
             """
-            SELECT member_id, name, email, phone, password_hash
+            SELECT member_id, name, email, phone, is_active ,password_hash
             FROM members
             WHERE email = ?
             """,
@@ -245,20 +248,97 @@ def get_member_by_id(member_id: int) -> dict | None:
 
     return dict(row) if row is not None else None
 
+def get_member_loan_history(
+    member_id: int,
+) -> list[dict]:
+    """Return active and returned loans for a member."""
+
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                loans.loan_id,
+                loans.book_id,
+                books.title,
+                books.author_name,
+                loans.loan_date,
+                loans.due_date,
+                loans.return_date
+            FROM loans
+            JOIN books
+                ON books.book_id = loans.book_id
+            WHERE loans.member_id = ?
+            ORDER BY
+                loans.loan_date DESC,
+                loans.loan_id DESC
+            """,
+            (member_id,),
+        ).fetchall()
+
+    return [
+        dict(row)
+        for row in rows
+    ]
+
 
 def delete_member(member_id: int) -> bool:
-    """Delete a member by ID.
+    """Delete a member without loans or anonymise a member with loan history."""
 
-    Return True if the member was deleted, or False if not found.
-    """
     with get_connection() as connection:
+
+        # Check for active loans
         cursor = connection.execute(
             """
-            DELETE FROM members
+            SELECT COUNT(*)
+            FROM loans
+            WHERE member_id = ?
+            AND return_date IS NULL
+            """,
+            (member_id,),
+        )
+
+        active_loans = cursor.fetchone()[0]
+
+        if active_loans > 0:
+            raise sqlite3.IntegrityError(
+                "Member has active loans"
+            )
+
+        # Check whether the member has any loan history
+        cursor = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM loans
             WHERE member_id = ?
             """,
             (member_id,),
         )
+
+        loan_history = cursor.fetchone()[0]
+
+        if loan_history > 0:
+            # Anonymise member
+            cursor = connection.execute(
+                """
+                UPDATE members
+                SET
+                    name = 'Former member',
+                    email = ?,
+                    phone = NULL,
+                    is_active = 0
+                WHERE member_id = ?
+                """,
+                (f"deleted+{member_id}@invalid.local", member_id),
+            )
+        else:
+            # No loan history: permanently delete
+            cursor = connection.execute(
+                """
+                DELETE FROM members
+                WHERE member_id = ?
+                """,
+                (member_id,),
+            )
 
     return cursor.rowcount > 0
 
@@ -275,6 +355,118 @@ def add_book(title: str, author_name: str, publication_year: int ) -> int:
         )
 
         return cursor.lastrowid
+
+
+def import_book_with_authors(
+    title: str,
+    author_names: list[str],
+    publication_year: int | None,
+) -> dict:
+    """Import a book and its authors in one transaction."""
+
+    normalized_authors = []
+
+    for author_name in author_names:
+        cleaned_name = author_name.strip()
+
+        if cleaned_name and cleaned_name not in normalized_authors:
+            normalized_authors.append(cleaned_name)
+
+    if not normalized_authors:
+        raise ValueError("At least one valid author is required")
+
+    author_display = ", ".join(normalized_authors)
+
+    with get_connection() as connection:
+        duplicate = connection.execute(
+            """
+            SELECT
+                book_id,
+                title,
+                author_name,
+                publication_year
+            FROM books
+            WHERE LOWER(title) = LOWER(?)
+              AND LOWER(author_name) = LOWER(?)
+              AND publication_year IS ?
+            """,
+            (
+                title,
+                author_display,
+                publication_year,
+            ),
+        ).fetchone()
+
+        if duplicate is not None:
+            raise sqlite3.IntegrityError(
+                "Book already exists"
+            )
+
+        book_cursor = connection.execute(
+            """
+            INSERT INTO books (
+                title,
+                author_name,
+                publication_year
+            )
+            VALUES (?, ?, ?)
+            """,
+            (
+                title,
+                author_display,
+                publication_year,
+            ),
+        )
+
+        book_id = book_cursor.lastrowid
+
+        for author_name in normalized_authors:
+            connection.execute(
+                """
+                INSERT INTO authors (name)
+                VALUES (?)
+                ON CONFLICT(name) DO NOTHING
+                """,
+                (author_name,),
+            )
+
+            author_row = connection.execute(
+                """
+                SELECT author_id
+                FROM authors
+                WHERE name = ?
+                """,
+                (author_name,),
+            ).fetchone()
+
+            connection.execute(
+                """
+                INSERT INTO book_authors (
+                    book_id,
+                    author_id
+                )
+                VALUES (?, ?)
+                """,
+                (
+                    book_id,
+                    author_row["author_id"],
+                ),
+            )
+
+        created_book = connection.execute(
+            """
+            SELECT
+                book_id,
+                title,
+                author_name,
+                publication_year
+            FROM books
+            WHERE book_id = ?
+            """,
+            (book_id,),
+        ).fetchone()
+
+    return dict(created_book)
 
 
 def delete_book(book_id: int) -> bool:
