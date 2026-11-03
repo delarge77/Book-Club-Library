@@ -1,3 +1,17 @@
-# Authentication and password security
+# FastAPI application and development server
+fastapi[standard]
+
+# Environment variables
+python-dotenv
+
+# External HTTP requests
+requests
+
+# Email validation for Pydantic EmailStr
+email-validator
+
+# Password hashing with Argon2
 pwdlib[argon2]
+
+# JWT access tokens
 PyJWT
