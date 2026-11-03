@@ -8,8 +8,27 @@ load_dotenv()
 API_KEY = os.getenv("API_KEY")
 
 BASE_URL = "http://127.0.0.1:8000"
-BOOK_INFO = "book_id: {book_id} | name: {title} | year: {publication_year}"
+BOOK_INFO = "book_id: {book_id} | title: {title} | year: {publication_year}"
 
+def ask_book_id():
+    """Ask for a book_id."""
+    while True:
+        try:
+            return int(input("Book ID: ").strip())
+        except ValueError:
+            print("Please type a number.")
+
+
+def ask_year():
+    """Ask for a publication year. Enter skips and returns None."""
+    while True:
+        year = input("Publication year: ").strip()
+        if year == "":
+            return None
+        try:
+            return int(year)
+        except ValueError:
+            print("Please type a number, or press Enter to skip.")
 
 def show_user_menu():
     """Print the user menu."""
@@ -39,14 +58,8 @@ def list_books():
 def show_book():
     """Print one book using book_id"""
 
-    while True:
-        try:
-            user_input = int(input("book id:"))
-        except ValueError:
-            print("Please type a number.")
-        else:
-            break
-    book = get_json(f"{BASE_URL}/books/{(user_input)}")
+    book_id = ask_book_id()
+    book = get_json(f"{BASE_URL}/books/{book_id}")
     if book is None:
         return
     print(BOOK_INFO.format_map(book))
@@ -57,10 +70,7 @@ def add_new_book(headers):
 
     title = input("Book title : ").strip()
     author_name = input("Author Name : ").strip()
-    publication_year = input("Publication year : ").strip() or None
-    if publication_year is not None:
-        publication_year = int(publication_year)
-
+    publication_year = ask_year()
     try:
         response = requests.post(
             f"{BASE_URL}/books/add_new_book",
@@ -79,7 +89,11 @@ def add_new_book(headers):
         print("The server is too slow to answer. Try again later.")
         return
 
-    data = response.json()
+    try:
+        data = response.json()
+    except requests.exceptions.JSONDecodeError:
+        print("Error:", response.status_code)
+        return
     if response.status_code == 201:
         print("Book added!")
         if publication_year is not None:
@@ -94,18 +108,10 @@ def add_new_book(headers):
     else:
         print("Error:", response.status_code, data["detail"])
 
-
-# delete book
 def delete_book(headers):
     """delete book using book_id"""
     print("Delete book")
-    while True:
-        try:
-            book_id = int(input("Book ID: : ").strip())
-        except ValueError:
-            print("Please type a number.")
-        else:
-            break
+    book_id = ask_book_id()
     book = get_json(f"{BASE_URL}/books/{book_id}")
     if book is None:
         return
@@ -136,6 +142,9 @@ def delete_book(headers):
         print("Book has loans and can not be deleted")
     else:
         print("Error:", response.status_code)
+
+
+# update book
 
 
 # show member information
