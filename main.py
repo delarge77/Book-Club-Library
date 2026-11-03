@@ -16,6 +16,7 @@ from models import (
     LoanCreate,
     MemberUpdate,
     MemberPersonalDataResponse,
+    ExternalBookImport,
 )
 
 from database import (
@@ -39,6 +40,7 @@ from database import (
     delete_member,
     update_member_contact_by_id,
     get_member_loan_history,
+    import_book_with_authors,
 )
 
 from external_api import search_books
@@ -247,6 +249,37 @@ def search_open_library(q: str):
             status_code=503, detail="Open Library is not reachable. Try again later."
         )
     return books
+
+
+@app.post(
+    "/books/import",
+    status_code=status.HTTP_201_CREATED,
+)
+def import_open_library_book(
+    book: ExternalBookImport,
+    _: dict = Depends(get_current_user),
+):
+    """Import a selected Open Library book into the catalogue."""
+
+    try:
+        imported_book = import_book_with_authors(
+            title=book.title,
+            author_names=book.author_name,
+            publication_year=book.first_publish_year,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(error),
+        ) from error
+    except sqlite3.IntegrityError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Book is already in the local catalogue",
+        ) from error
+
+    return imported_book
+
 
 @app.patch("/books/update/{book_id}")
 def update_book(book_id: int, book_update: BookUpdate, _: dict = Depends(get_current_user),):
