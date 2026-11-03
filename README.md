@@ -43,6 +43,19 @@ The project will be developed using Python and SQLite, following Agile/Scrum pra
 - Register book returns and return dates.
 - Track active and completed loans.
 
+### Member Deletion and Anonymisation
+
+When a member is removed from the library, the application checks whether they have any loan history.
+
+- **Members with no loan history:** The member is permanently deleted from the database because there are no loan records that need to be preserved.
+- **Members with loan history:** The member is anonymised instead of permanently deleted.
+
+Anonymisation is used to preserve the library's historical loan records and maintain database integrity. Loan records are connected to members through foreign keys, so permanently deleting a member with loan history could break these relationships or cause historical information to be lost.
+
+During anonymisation, the member's personal information, such as their name, email address and phone number, is replaced or removed. Their loan records remain in the database, but they are no longer associated with identifiable personal information.
+
+This approach also supports data minimisation by retaining only the information needed for the library's historical records.
+
 ## 🛠️ Technology Stack
 
 | Technology | Purpose |
