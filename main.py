@@ -20,7 +20,7 @@ from models import (
 from database import (
     get_all_catalogued_books,
     get_catalogued_book_by_id,
-    get_all_members,
+    get_all_active_members,
     add_member,
     get_member_by_email,
     add_book,
@@ -94,7 +94,7 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token", headers={"WWW-Authenticate": "Bearer"})
 
-    user = next((m for m in get_all_members() if str(m["member_id"]) == member_id), None)
+    user = next((m for m in get_all_active_members() if str(m["member_id"]) == member_id), None)
 
     if user is None:
         raise HTTPException(
@@ -141,6 +141,12 @@ def add_new_user(member: Member):
 def login(member: LoginRequest):
     user = get_member_by_email(member.email)
 
+    if not user or not user["is_active"]:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials"
+        )
+
     if user is None or not password_hash.verify(member.password, user["password_hash"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -186,7 +192,8 @@ def get_my_profile(current_user: dict = Depends(get_current_user)):
         "member_id": current_user["member_id"],
         "name": current_user["name"],
         "email": current_user["email"],
-        "phone": current_user["phone"]
+        "phone": current_user["phone"],
+        "is_active": current_user["is_active"]
     }
 
 
@@ -329,7 +336,7 @@ def return_book(loan_id: int, _: dict = Depends(get_current_user)):
 @app.get("/members")
 def get_all_registered_members(_: dict = Depends(get_current_user)):
     """Return all registered members"""
-    return get_all_members()
+    return get_all_active_members()
 
   
 @app.get("/members/{member_id}/loans/current")
