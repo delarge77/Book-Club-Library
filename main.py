@@ -14,7 +14,8 @@ from models import (
     Book, 
     BookUpdate, 
     LoanCreate,
-    MemberUpdate
+    MemberUpdate,
+    MemberPersonalDataResponse,
 )
 
 from database import (
@@ -37,6 +38,7 @@ from database import (
     delete_book,
     delete_member,
     update_member_contact_by_id,
+    get_member_loan_history,
 )
 
 from external_api import search_books
@@ -186,16 +188,29 @@ def add_new_book(book: Book, _: dict = Depends(get_current_user)):
     )
 
 
-@app.get("/members/me", status_code=201)
-def get_my_profile(current_user: dict = Depends(get_current_user)):
-    return {
-        "member_id": current_user["member_id"],
-        "name": current_user["name"],
-        "email": current_user["email"],
-        "phone": current_user["phone"],
-        "is_active": current_user["is_active"]
-    }
+@app.get(
+    "/members/me",
+    response_model=MemberPersonalDataResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_my_profile(
+    current_user: dict = Depends(get_current_user),
+):
+    """Return the authenticated member's profile and loans."""
 
+    member_id = current_user["member_id"]
+    loans = get_member_loan_history(member_id)
+
+    return {
+        "profile": {
+            "member_id": current_user["member_id"],
+            "name": current_user["name"],
+            "email": current_user["email"],
+            "phone": current_user["phone"],
+            "is_active": current_user["is_active"]
+        },
+        "loans": loans,
+    }
 
 @app.delete(
     "/members/{member_id}",

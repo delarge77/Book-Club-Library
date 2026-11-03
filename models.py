@@ -43,6 +43,35 @@ class MemberUpdate(BaseModel):
         if isinstance(value, str) and not value.strip():
             raise ValueError("This field cannot be empty")
         return value
+
+class MemberLoanResponse(BaseModel):
+    """A loan included in a member's personal data."""
+
+    loan_id: int
+    book_id: int
+    title: str
+    author_name: str
+    loan_date: str
+    due_date: str
+    return_date: str | None = None
+
+
+class MemberProfileResponse(BaseModel):
+    """Profile data stored about a library member."""
+
+    member_id: int
+    name: str
+    email: EmailStr
+    phone: str | None = None
+
+
+class MemberPersonalDataResponse(BaseModel):
+    """Profile and loan data stored about a library member."""
+
+    profile: MemberProfileResponse
+    loans: list[MemberLoanResponse] = Field(
+        default_factory=list
+    )
     
 
 class LoginRequest(BaseModel):
