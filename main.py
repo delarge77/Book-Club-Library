@@ -7,12 +7,12 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pwdlib import PasswordHash
 import jwt
 from jwt.exceptions import InvalidTokenError
-from models import ( 
-    Member, 
-    LoginRequest, 
-    TokenResponse, 
-    Book, 
-    BookUpdate, 
+from models import (
+    Member,
+    LoginRequest,
+    TokenResponse,
+    Book,
+    BookUpdate,
     LoanCreate,
     MemberUpdate,
     MemberPersonalDataResponse,
@@ -31,8 +31,8 @@ from database import (
     get_loan_by_id,
     return_loan,
     get_overdue_loans,
-    update_book_by_id, 
-    get_member_by_id, 
+    update_book_by_id,
+    get_member_by_id,
     get_member_current_loans,
     search_members,
     delete_book,
@@ -154,26 +154,26 @@ def login(member: LoginRequest):
     print("✅ Login successful! Access token generated.")
     return {"access_token": access_token, "token_type": "bearer"}
 
-@app.post("/books/add_new_book", status_code=201)
+@app.post("/books/add_new_book", status_code=201, dependencies=[Depends(check_key)])
 def add_new_book(book: Book, _: dict = Depends(get_current_user)):
     try:
             new_book_id = add_book( title = book.title, author_name=book.author_name, publication_year=book.publication_year)
             print(f"✅ Book '{book.title}' registered successfully! (201 Created)")
-    
+
             return {
                 "book_id": new_book_id,
                 "title": book.title,
                 "author_name": book.author_name,
                 "publication_year": book.publication_year,
             }
-    
+
     except sqlite3.IntegrityError as error:
         print(f"❌ Could not register book: {error}")
         raise HTTPException(
             status_code=409,
             detail="Book already registered or invalid book data"
     )
-    
+
     except Exception as error:
         print(f"❌ Error registering book: {error}")
         raise HTTPException(
@@ -248,7 +248,7 @@ def search_open_library(q: str):
         )
     return books
 
-@app.patch("/books/update/{book_id}")
+@app.patch("/books/update/{book_id}", dependencies=[Depends(check_key)])
 def update_book(book_id: int, book_update: BookUpdate, _: dict = Depends(get_current_user),):
 
     update_data = book_update.model_dump(exclude_unset=True)
@@ -310,7 +310,7 @@ def remove_book(book_id: int):
         raise HTTPException(status_code=404, detail="Book not found")
 
 
-@app.post("/loans", status_code=201)
+@app.post("/loans", status_code=201, dependencies=[Depends(check_key)])
 def lend_book(loan: LoanCreate, current_user: dict = Depends(get_current_user)):
     """Create a new loan using book_id and logged in user"""
     book = get_catalogued_book_by_id(loan.book_id)
@@ -330,7 +330,7 @@ def overdue_loans(_: dict = Depends(get_current_user)):
     return get_overdue_loans()
 
 
-@app.put("/loans/{loan_id}/return")
+@app.put("/loans/{loan_id}/return", dependencies=[Depends(check_key)])
 def return_book(loan_id: int, _: dict = Depends(get_current_user)):
     """Return loan - anyone that's logged in can return a loan"""
     loan = get_loan_by_id(loan_id)
@@ -347,7 +347,7 @@ def get_all_registered_members(_: dict = Depends(get_current_user)):
     """Return all registered members"""
     return get_all_members()
 
-  
+
 @app.get("/members/{member_id}/loans/current")
 def get_current_loans(member_id: int, _: dict = Depends(get_current_user),):
 
@@ -371,7 +371,7 @@ def filter_members(q: str, _: dict = Depends(get_current_user)):
 
     return list(results.values())
 
-@app.patch("/members/update_contact/{member_id}")
+@app.patch("/members/update_contact/{member_id}", dependencies=[Depends(check_key)])
 def update_member(member_id: int, member_update: MemberUpdate, _: dict = Depends(get_current_user),):
 
     update_data = member_update.model_dump(exclude_unset=True)
@@ -390,7 +390,7 @@ def update_member(member_id: int, member_update: MemberUpdate, _: dict = Depends
                 status_code=404,
                 detail="Member not found"
             )
-        
+
         member = {"member_id":updated_member["member_id"], "name":updated_member["name"],
                   "email":updated_member["email"], "phone":updated_member["phone"],
                   "message":"User updated sucessfully"}
