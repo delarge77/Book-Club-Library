@@ -91,6 +91,30 @@ def add_new_book(headers):
         print("Error:", response.status_code, data["detail"])
 
 # delete book
+def delete_book(headers):
+    """delete book using book_id"""
+    print("Delete book")
+    while True:
+        try:
+            book_id = int(input("Book ID: : ").strip())
+        except ValueError:
+            print("Please type a number.")
+        else:
+            break
+    try:
+        response = requests.delete(
+            f"{BASE_URL}/books/{book_id}",
+            headers=headers,
+            timeout=5,
+        )
+    except requests.exceptions.ConnectionError:
+        print("Cannot reach the server. Is the API running?")
+        return
+    except requests.exceptions.Timeout:
+        print("The server is too slow to answer. Try again later.")
+        return
+
+
 # show member information
 # show atleast one memberstatistics endpoint
 # errors from the api with clear message
