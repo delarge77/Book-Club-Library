@@ -68,7 +68,7 @@ def show_user_menu():
     # Reserved for the backlog stories (uncomment when the option is added):
     # print("13. Show overdue loans")
     # print("14. Show never-borrowed books")
-    # print("15. List members")
+    print("15. List members")
     # print("16. Search members")
     print("0. Log out")
     print(" ")
@@ -472,6 +472,19 @@ def return_book(headers):
         print("Error:", response.status_code)
 
 
+def show_members(headers):
+    """List all registered members."""
+    print("\n--- Members ---")
+    members = get_json(f"{BASE_URL}/members", headers=headers)
+    if members is None:
+        return
+    if not members:
+        print("No members yet.")
+        return
+    for number, member in enumerate(members, start=1):
+        print(f"{number}. " + MEMBER_INFO.format_map(member))
+
+
 def logged_in_menu(token):
     """Show the logged-in menu."""
     headers = {"X-API-Key": API_KEY, "Authorization": f"Bearer {token}"}
@@ -504,6 +517,8 @@ def logged_in_menu(token):
             return_book(headers)
         elif choice == "12":
             show_my_current_loans(headers)
+        elif choice == "15":
+            show_members(headers)
         elif choice == "0":
             print("Logging out. Bye!")
             break
