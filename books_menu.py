@@ -56,7 +56,7 @@ def show_user_menu():
     # Reserved for the backlog stories (uncomment when the option is added):
     # print("10. Borrow a book")
     # print("11. Return a book")
-    # print("12. Show my current loans")
+    print("12. Show my current loans")
     # print("13. Show overdue loans")
     # print("14. Show never-borrowed books")
     # print("15. List members")
@@ -363,6 +363,26 @@ def show_most_borrowed_books():
         )
 
 
+def show_my_current_loans(headers):
+    """Show the logged-in member's current loans."""
+    print("\n--- My current loans ---")
+
+    member_info = get_json(f"{BASE_URL}/members/me", headers=headers)
+    if member_info is None:
+        return
+    member_id = member_info["profile"]["member_id"]
+    loans = get_json(f"{BASE_URL}/members/{member_id}/loans/current", headers=headers)
+    if loans is None:
+        return
+    if not loans:
+        print("No current loans.")
+        return
+    for number, loan in enumerate(loans, start=1):
+        print(
+            f"{number}. {loan['title']}, due {loan['due_date']}, loan_id {loan['loan_id']}"
+        )
+
+
 def logged_in_menu(token):
     """Show the logged-in menu."""
     headers = {"X-API-Key": API_KEY, "Authorization": f"Bearer {token}"}
@@ -389,6 +409,8 @@ def logged_in_menu(token):
             show_most_borrowed_books()
         elif choice == "9":
             import_book(headers)
+        elif choice == "12":
+            show_my_current_loans(headers)
         elif choice == "0":
             print("Logging out. Bye!")
             break
