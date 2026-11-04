@@ -16,7 +16,7 @@ def ask_book_id():
     """Ask for a book_id."""
     while True:
         try:
-            return int(input("Book ID: ").strip())
+            return int(input("Book ID : ").strip())
         except ValueError:
             print("Please type a number.")
 
@@ -24,7 +24,7 @@ def ask_book_id():
 def ask_year():
     """Ask for a publication year. Enter skips and returns None."""
     while True:
-        year = input("Publication year: ").strip()
+        year = input("Publication Year : ").strip()
         if year == "":
             return None
         try:
@@ -45,14 +45,14 @@ def show_user_menu():
     print("5. Update book")
     print("6. Show my member info")
     print("7. Update my contact info")
-    # print("8. Show most borrowed books")
+    print("8. Show most borrowed books")
     print("9. Import from Open Library")
     print("0. Log out")
     print(" ")
 
 
 def list_books():
-    """list all catalogued books"""
+    """List all catalogued books."""
 
     books = get_json(f"{BASE_URL}/books")
     if books is None:
@@ -62,7 +62,7 @@ def list_books():
 
 
 def show_book():
-    """Print one book using book_id"""
+    """Print one book using book_id."""
 
     book_id = ask_book_id()
     book = get_json(f"{BASE_URL}/books/{book_id}")
@@ -74,7 +74,7 @@ def show_book():
 def add_new_book(headers):
     """Ask for book details to add new book."""
 
-    title = input("Book title : ").strip()
+    title = input("Book Title : ").strip()
     author_name = input("Author Name : ").strip()
     publication_year = ask_year()
     try:
@@ -185,7 +185,7 @@ def import_book(headers):
 
 
 def delete_book(headers):
-    """delete book using book_id"""
+    """Delete a book using book_id."""
     print("Delete book")
     book_id = ask_book_id()
     book = get_json(f"{BASE_URL}/books/{book_id}")
@@ -213,15 +213,15 @@ def delete_book(headers):
     if response.status_code == 204:
         print("Book deleted")
     elif response.status_code == 404:
-        print("Book cant be found")
+        print("Book can't be found")
     elif response.status_code == 409:
-        print("Book has loans and can not be deleted")
+        print("Book has loans and cannot be deleted")
     else:
         print("Error:", response.status_code)
 
 
 def update_book(headers):
-    """update book by book_id"""
+    """Update a book using book_id."""
 
     book_id = ask_book_id()
     book = get_json(f"{BASE_URL}/books/{book_id}")
@@ -275,7 +275,7 @@ def update_book(headers):
 
 
 def show_my_info(headers):
-    """Show logged in members info"""
+    """Show the logged-in member's info."""
 
     member_info = get_json(f"{BASE_URL}/members/me", headers=headers)
     if member_info is None:
@@ -283,8 +283,9 @@ def show_my_info(headers):
     profile = member_info["profile"]
     print(MEMBER_INFO.format_map(profile))
 
+
 def update_my_contact(headers):
-    """Update your contact info as logged in"""
+    """Update the logged-in member's email and phone."""
 
     member_info = get_json(f"{BASE_URL}/members/me", headers=headers)
     if member_info is None:
@@ -326,8 +327,26 @@ def update_my_contact(headers):
         print("Error:", response.status_code, data["detail"])
 
 
+def show_most_borrowed_books():
+    """Show the most borrowed books."""
+    books = get_json(f"{BASE_URL}/books/most-borrowed")
+    if books is None:
+        return
+    if not books:
+        print("No loans yet.")
+        return
+    print("-------------------")
+    print("Most borrowed books")
+    print("-------------------")
+    for number, book in enumerate(books, start=1):
+        print(
+            f"{number}. book_id: {book['book_id']} | title: {book['title']} | loan_count: {book['loan_count']}"
+        )
+    print("-------------------")
+
+
 def logged_in_menu(token):
-    """Show logged-in menu"""
+    """Show the logged-in menu."""
     headers = {"X-API-Key": API_KEY, "Authorization": f"Bearer {token}"}
 
     while True:
@@ -348,6 +367,8 @@ def logged_in_menu(token):
             show_my_info(headers)
         elif choice == "7":
             update_my_contact(headers)
+        elif choice == "8":
+            show_most_borrowed_books()
         elif choice == "9":
             import_book(headers)
         elif choice == "0":
