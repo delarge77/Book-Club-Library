@@ -81,7 +81,7 @@ Keep all output in `client.py` and `books_menu.py` the same, so the program feel
 - Messages are short and friendly: `Login successful`, `Book deleted`, `This book is already in the library.`
 - 401 always prints `Please log in again.`
 - An empty result prints one line, for example `No books found.`
-- Headings, when needed, use the menu style: `--- Most borrowed books ---`.
+- Every menu option starts with a heading in menu style, with the option's name: `--- Most borrowed books ---`.
 
 ## 3. Branch Naming
 
