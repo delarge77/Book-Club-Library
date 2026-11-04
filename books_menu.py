@@ -64,10 +64,10 @@ def show_user_menu():
     print("9. Import from Open Library")
     print("10. Borrow a book")
     print("11. Return a book")
-    # Reserved for the backlog stories (uncomment when the option is added):
-    # print("12. Show my current loans")
+    print("12. Show my current loans")
     print("13. Show overdue loans")
     print("14. Show never-borrowed books")
+    # Reserved for the backlog stories (uncomment when the option is added):
     # print("15. List members")
     # print("16. Search members")
     print("0. Log out")
@@ -420,6 +420,26 @@ def show_most_borrowed_books():
         )
 
 
+def show_my_current_loans(headers):
+    """Show the logged-in member's current loans."""
+    print("\n--- My current loans ---")
+
+    member_info = get_json(f"{BASE_URL}/members/me", headers=headers)
+    if member_info is None:
+        return
+    member_id = member_info["profile"]["member_id"]
+    loans = get_json(f"{BASE_URL}/members/{member_id}/loans/current", headers=headers)
+    if loans is None:
+        return
+    if not loans:
+        print("No current loans.")
+        return
+    for number, loan in enumerate(loans, start=1):
+        print(
+            f"{number}. {loan['title']}, due {loan['due_date']}, loan_id {loan['loan_id']}"
+        )
+
+
 def borrow_book(headers):
     """Borrow a book using its book_id."""
 
@@ -459,10 +479,7 @@ def borrow_book(headers):
     elif response.status_code == 409:
         print("This book is already on loan")
     elif response.status_code == 401:
-        print(
-            "Not logged in, the API key is invalid, "
-            "or your session has expired."
-        )
+        print("Not logged in, the API key is invalid, or your session has expired.")
     elif response.status_code == 422:
         print("Please enter a valid positive book ID")
     else:
@@ -533,8 +550,8 @@ def logged_in_menu(token):
             borrow_book(headers)
         elif choice == "11":
             return_book(headers)
-        
-
+        elif choice == "12":
+            show_my_current_loans(headers)
         elif choice == "13":
             show_overdue_loans(headers)
         elif choice == "14":
