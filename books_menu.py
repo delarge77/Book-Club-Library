@@ -62,9 +62,9 @@ def show_user_menu():
     print("7. Update my contact info")
     print("8. Show most borrowed books")
     print("9. Import from Open Library")
-    # Reserved for the backlog stories (uncomment when the option is added):
-    # print("10. Borrow a book")
+    print("10. Borrow a book")
     print("11. Return a book")
+    # Reserved for the backlog stories (uncomment when the option is added):
     # print("12. Show my current loans")
     # print("13. Show overdue loans")
     # print("14. Show never-borrowed books")
@@ -372,6 +372,59 @@ def show_most_borrowed_books():
         )
 
 
+def borrow_book(headers):
+    """Borrow a book using its book_id."""
+
+    print("Borrow a book")
+    book_id = ask_book_id()
+
+    confirm = input(f"Borrow book with ID {book_id}? y/n: ").strip().lower()
+    if confirm != "y":
+        print("Cancelled")
+        return
+
+    try:
+        response = requests.post(
+            f"{BASE_URL}/loans",
+            json={"book_id": book_id},
+            headers=headers,
+            timeout=5,
+        )
+    except requests.exceptions.ConnectionError:
+        print("Cannot reach the server. Is the API running?")
+        return
+    except requests.exceptions.Timeout:
+        print("The server is too slow to answer. Try again later.")
+        return
+
+    try:
+        data = response.json()
+    except requests.exceptions.JSONDecodeError:
+        print("Error:", response.status_code)
+        return
+
+    if response.status_code == 201:
+        print("Book borrowed!")
+        print(f"Loan ID: {data['loan_id']}")
+    elif response.status_code == 404:
+        print("Book not found")
+    elif response.status_code == 409:
+        print("This book is already on loan")
+    elif response.status_code == 401:
+        print(
+            "Not logged in, the API key is invalid, "
+            "or your session has expired."
+        )
+    elif response.status_code == 422:
+        print("Please enter a valid positive book ID")
+    else:
+        print(
+            "Error:",
+            response.status_code,
+            data.get("detail", "Unknown error"),
+        )
+
+
 def return_book(headers):
     """Return a borrowed book using loan_id."""
     print("\n--- Return a book ---")
@@ -428,6 +481,8 @@ def logged_in_menu(token):
             show_most_borrowed_books()
         elif choice == "9":
             import_book(headers)
+        elif choice == "10":
+            borrow_book(headers)
         elif choice == "11":
             return_book(headers)
         elif choice == "0":
