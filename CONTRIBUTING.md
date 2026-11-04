@@ -72,6 +72,17 @@ def get_book_by_id(book_id: int) -> dict | None:
 - Keep `.env` in `.gitignore`.
 - Use `.env.example` to document required environment variables with placeholder values only.
 
+### 2.6 Client Output
+
+Keep all output in `client.py` and `books_menu.py` the same, so the program feels like one app. We follow the style of the client menu and the Open Library import.
+
+- Lists are numbered and read like a sentence: `1. Dune by Frank Herbert (1965)`.
+- Input prompts use `Field Name : `.
+- Messages are short and friendly: `Login successful`, `Book deleted`, `This book is already in the library.`
+- 401 always prints `Please log in again.`
+- An empty result prints one line, for example `No books found.`
+- Every menu option starts with a heading in menu style, with the option's name: `--- Most borrowed books ---`.
+
 ## 3. Branch Naming
 
 We use descriptive branch names with a prefix indicating the type of work.
