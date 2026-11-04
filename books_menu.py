@@ -8,8 +8,14 @@ load_dotenv()
 API_KEY = os.getenv("API_KEY")
 
 BASE_URL = "http://127.0.0.1:8000"
-BOOK_INFO = "book_id: {book_id} | title: {title} | year: {publication_year}"
-MEMBER_INFO = "member_id: {member_id} | name: {name} | email: {email} | phone: {phone}"
+BOOK_INFO = "{title} ({publication_year}), book_id {book_id}"
+MEMBER_INFO = "{name}, {email}, {phone} (member_id {member_id})"
+
+STATUS_MESSAGES = {
+    401: "Please log in again.",
+    "connection": "Cannot reach the server. Is the API running?",
+    "timeout": "The server is too slow to answer. Try again later.",
+}
 
 
 def ask_book_id():
@@ -48,22 +54,31 @@ def show_user_menu():
     print("8. Show most borrowed books")
     print("9. Import from Open Library")
     print("10. Borrow a book")
+    # Reserved for the backlog stories (uncomment when the option is added):
+    # print("11. Return a book")
+    # print("12. Show my current loans")
+    # print("13. Show overdue loans")
+    # print("14. Show never-borrowed books")
+    # print("15. List members")
+    # print("16. Search members")
     print("0. Log out")
     print(" ")
 
 
 def list_books():
     """List all catalogued books."""
+    print("\n--- Books ---")
 
     books = get_json(f"{BASE_URL}/books")
     if books is None:
         return
-    for book in books:
-        print(BOOK_INFO.format_map(book))
+    for number, book in enumerate(books, start=1):
+        print(f"{number}. " + BOOK_INFO.format_map(book))
 
 
 def show_book():
     """Print one book using book_id."""
+    print("\n--- Show one book ---")
 
     book_id = ask_book_id()
     book = get_json(f"{BASE_URL}/books/{book_id}")
@@ -74,6 +89,7 @@ def show_book():
 
 def add_new_book(headers):
     """Ask for book details to add new book."""
+    print("\n--- Add new book ---")
 
     title = input("Book Title : ").strip()
     author_name = input("Author Name : ").strip()
@@ -90,10 +106,10 @@ def add_new_book(headers):
             timeout=5,
         )
     except requests.exceptions.ConnectionError:
-        print("Cannot reach the server. Is the API running?")
+        print(STATUS_MESSAGES["connection"])
         return
     except requests.exceptions.Timeout:
-        print("The server is too slow to answer. Try again later.")
+        print(STATUS_MESSAGES["timeout"])
         return
 
     try:
@@ -152,6 +168,7 @@ def choose_book(books):
 
 def import_book(headers):
     """Search Open Library, pick a book and import it."""
+    print("\n--- Import from Open Library ---")
     books = search_open_library()
     if not books:
         return
@@ -168,10 +185,10 @@ def import_book(headers):
             timeout=5,
         )
     except requests.exceptions.ConnectionError:
-        print("Cannot reach the server. Is the API running?")
+        print(STATUS_MESSAGES["connection"])
         return
     except requests.exceptions.Timeout:
-        print("The server is too slow to answer. Try again later.")
+        print(STATUS_MESSAGES["timeout"])
         return
 
     if response.status_code == 201:
@@ -180,14 +197,14 @@ def import_book(headers):
     elif response.status_code == 409:
         print("This book is already in the library.")
     elif response.status_code == 401:
-        print("Please log in again.")
+        print(STATUS_MESSAGES[401])
     else:
         print("Error:", response.status_code)
 
 
 def delete_book(headers):
     """Delete a book using book_id."""
-    print("Delete book")
+    print("\n--- Delete book ---")
     book_id = ask_book_id()
     book = get_json(f"{BASE_URL}/books/{book_id}")
     if book is None:
@@ -205,10 +222,10 @@ def delete_book(headers):
         )
 
     except requests.exceptions.ConnectionError:
-        print("Cannot reach the server. Is the API running?")
+        print(STATUS_MESSAGES["connection"])
         return
     except requests.exceptions.Timeout:
-        print("The server is too slow to answer. Try again later.")
+        print(STATUS_MESSAGES["timeout"])
 
         return
     if response.status_code == 204:
@@ -223,6 +240,7 @@ def delete_book(headers):
 
 def update_book(headers):
     """Update a book using book_id."""
+    print("\n--- Update book ---")
 
     book_id = ask_book_id()
     book = get_json(f"{BASE_URL}/books/{book_id}")
@@ -251,10 +269,10 @@ def update_book(headers):
             timeout=5,
         )
     except requests.exceptions.ConnectionError:
-        print("Cannot reach the server. Is the API running?")
+        print(STATUS_MESSAGES["connection"])
         return
     except requests.exceptions.Timeout:
-        print("The server is too slow to answer. Try again later.")
+        print(STATUS_MESSAGES["timeout"])
         return
 
     try:
@@ -270,13 +288,14 @@ def update_book(headers):
     elif response.status_code == 422:
         print("Please check input")
     elif response.status_code == 401:
-        print("Not logged in or your session has expired. Log in again.")
+        print(STATUS_MESSAGES[401])
     else:
         print("Error:", response.status_code, data["detail"])
 
 
 def show_my_info(headers):
     """Show the logged-in member's info."""
+    print("\n--- My member info ---")
 
     member_info = get_json(f"{BASE_URL}/members/me", headers=headers)
     if member_info is None:
@@ -287,6 +306,7 @@ def show_my_info(headers):
 
 def update_my_contact(headers):
     """Update the logged-in member's email and phone."""
+    print("\n--- Update my contact info ---")
 
     member_info = get_json(f"{BASE_URL}/members/me", headers=headers)
     if member_info is None:
@@ -304,10 +324,10 @@ def update_my_contact(headers):
             timeout=5,
         )
     except requests.exceptions.ConnectionError:
-        print("Cannot reach the server. Is the API running?")
+        print(STATUS_MESSAGES["connection"])
         return
     except requests.exceptions.Timeout:
-        print("The server is too slow to answer. Try again later.")
+        print(STATUS_MESSAGES["timeout"])
         return
 
     try:
@@ -323,27 +343,24 @@ def update_my_contact(headers):
     elif response.status_code == 422:
         print("Please check input")
     elif response.status_code == 401:
-        print("Not logged in or your session has expired. Log in again.")
+        print(STATUS_MESSAGES[401])
     else:
         print("Error:", response.status_code, data["detail"])
 
 
 def show_most_borrowed_books():
     """Show the most borrowed books."""
+    print("\n--- Most borrowed books ---")
     books = get_json(f"{BASE_URL}/books/most-borrowed")
     if books is None:
         return
     if not books:
         print("No loans yet.")
         return
-    print("-------------------")
-    print("Most borrowed books")
-    print("-------------------")
     for number, book in enumerate(books, start=1):
         print(
-            f"{number}. book_id: {book['book_id']} | title: {book['title']} | loan_count: {book['loan_count']}"
+            f"{number}. {book['title']} ({book['loan_count']} loans), book_id {book['book_id']}"
         )
-    print("-------------------")
 
 
 def borrow_book(headers):
