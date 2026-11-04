@@ -65,9 +65,8 @@ def show_user_menu():
     print("10. Borrow a book")
     print("11. Return a book")
     print("12. Show my current loans")
-    # Reserved for the backlog stories (uncomment when the option is added):
-    # print("13. Show overdue loans")
-    # print("14. Show never-borrowed books")
+    print("13. Show overdue loans")
+    print("14. Show never-borrowed books")
     print("15. List members")
     print("16. Search members")
     print("0. Log out")
@@ -357,6 +356,49 @@ def update_my_contact(headers):
         print("Error:", response.status_code, data["detail"])
 
 
+def show_overdue_loans(headers):
+    """Show active loans whose due date has passed."""
+
+    print("\n--- Overdue loans ---")
+
+    loans = get_json(
+        f"{BASE_URL}/loans/overdue",
+        headers=headers,
+    )
+
+    if loans is None:
+        return
+
+    if not loans:
+        print("There are no overdue loans.")
+        return
+
+    for number, loan in enumerate(loans, start=1):
+        print(
+            f"{number}. {loan['title']} borrowed by "
+            f"{loan['name']} | due {loan['due_date']} "
+            f"| loan_id {loan['loan_id']}"
+        )
+
+
+def show_never_borrowed_books():
+    """Show books that have never been borrowed."""
+
+    print("\n--- Never-borrowed books ---")
+
+    books = get_json(f"{BASE_URL}/books/never-borrowed")
+
+    if books is None:
+        return
+
+    if not books:
+        print("Every book has been borrowed at least once.")
+        return
+
+    for number, book in enumerate(books, start=1):
+        print(f"{number}. " + BOOK_INFO.format_map(book))
+
+
 def show_most_borrowed_books():
     """Show the most borrowed books."""
     print("\n--- Most borrowed books ---")
@@ -533,6 +575,10 @@ def logged_in_menu(token):
             return_book(headers)
         elif choice == "12":
             show_my_current_loans(headers)
+        elif choice == "13":
+            show_overdue_loans(headers)
+        elif choice == "14":
+            show_never_borrowed_books()
         elif choice == "15":
             show_members(headers)
         elif choice == "16":
