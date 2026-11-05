@@ -10,7 +10,7 @@
 To help 'Book Club Library' volunteers manage books, members, and loans efficiently while reducing manual work by importing external data.
  
 ## Sprint Goal
-?  <!-- the one sentence you wrote at Sprint Planning 1 on 26 Oct -->
+Members can register, log in and borrow and return books through a secured API, with books, authors and loans stored in a normalized SQLite database.
  
 ## Sprint Review 1 (5-minute demo for the class)
  
@@ -35,7 +35,9 @@ To help 'Book Club Library' volunteers manage books, members, and loans efficien
 **Not done in sprint 1 (moved to sprint 2):** client.py menu (register/login, books, members), import from Open Library into the DB, API key on all write routes.
  
 **Feedback from the review:**
-- ?
+- The goal was met: the API covers books, members and loans, with login (JWT) and an API key.
+- Decision: from sprint 2 we break each story into smaller sub-issues (one sub-issue = one branch = one PR), so PRs stay small and easier to review.
+ 
 ## Retrospective 1
  
 **What went well**
