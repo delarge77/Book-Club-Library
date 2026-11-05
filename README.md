@@ -47,7 +47,6 @@ Book-Club-Library/
 ├── seed.py             # Recreates and populates the development database
 ├── start.sh            # Starts the FastAPI development server
 ├── requirements.txt    # Python dependencies
-├── start.sh            # Local zsh startup helper
 ├── README.md           # Project documentation
 ├── CONTRIBUTING.md     # Team standards and Definition of Done
 ├── docs/
