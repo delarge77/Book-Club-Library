@@ -23,17 +23,27 @@ Volunteers can manage books from a terminal menu, import books from Open Library
 | Client | Register + login menu | #96 | Krithika |
 | Client | Books menu: list, show, add, update, delete | #104, #107 | Marcus |
 | Client | Import from Open Library in the menu | #108 | Krithika |
-| Client | My member info, update contact, most borrowed | #103 (PR open) | Marcus |
+| Client | My member info, update contact, most borrowed | #110 | Marcus |
+| Client | Consistent output layout (CONTRIBUTING 2.6), menu numbers 10-16 | #118 | Marcus |
+| Client | Borrow a book, return a book | #120, #119 | Christian, Krithika |
+| Client | My current loans | #121 | Marcus |
+| Client | Overdue loans, never-borrowed books | #122 | Christian |
+| Client | List and search members | #123 | Marcus |
+| Client | Refactoring + POST helper in api_client.py | #131 | Alessandro |
 | Setup | requirements.txt updated | #106 | Christian |
-| Docs | ER diagram, daily.md, retro notes | ? | Christian, Marcus |
+| Docs | ER diagram, daily notes, sprint retros | #109, #111, #127 | Christian, Marcus |
  
-## Retrospective 2 (fill in on 5 Nov)
- 
+## Retrospective 2
+
 **What went well**
-- Did the Way of Working from Retro 1 help? (PR posted in the channel, "I'm reviewing it", PR text with How to test + Closes #)
-- ?
+- The Way of Working from Retro 1 worked: every PR was posted in the channel, someone replied "I'm reviewing it", and PR texts had "How to test" and `Closes #`.
+- The communication rules worked: we asked in the chat first and agreed on a time before starting a call, with only the people needed.
+- Breaking stories into smaller sub-issues (decided at Sprint Review 1) gave small PRs that were quick to review.
+
 **What we can do better**
-- ?
+- Several PRs touched `books_menu.py` at the same time, which caused merge conflicts in the menu. Reserving menu numbers early (#118) helped.
+- Branches were sometimes behind main when tested, so reviewers saw old code. Merge main into your branch before asking for review.
+
 **What we would change next time**
-- ?
- 
+- Keep the "Way of Working" and the "sub-issue split".
+- Agree on shared files and formats (menu numbers, output style) at sprint planning, before coding starts.
