@@ -1,8 +1,7 @@
 import os
 import requests
 from dotenv import load_dotenv
-from api_client import get_json
-
+from api_client import get_json, post_json, put_json, patch_json, delete_request
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
@@ -95,49 +94,48 @@ def show_book():
     print(BOOK_INFO.format_map(book))
 
 
+
 def add_new_book(headers):
-    """Ask for book details to add new book."""
+    """Ask for book details to add a new book."""
+
     print("\n--- Add new book ---")
 
-    title = input("Book Title : ").strip()
-    author_name = input("Author Name : ").strip()
+    title = input("Book Title: ").strip()
+    author_name = input("Author Name: ").strip()
     publication_year = ask_year()
-    try:
-        response = requests.post(
-            f"{BASE_URL}/books/add_new_book",
-            json={
-                "title": title,
-                "author_name": author_name,
-                "publication_year": publication_year,
-            },
-            headers=headers,
-            timeout=5,
-        )
-    except requests.exceptions.ConnectionError:
-        print(STATUS_MESSAGES["connection"])
-        return
-    except requests.exceptions.Timeout:
-        print(STATUS_MESSAGES["timeout"])
+
+    response = post_json(
+        f"{BASE_URL}/books/add_new_book",
+        params={
+            "title": title,
+            "author_name": author_name,
+            "publication_year": publication_year
+        },
+        headers=headers,
+        timeout=5,
+        status_messages={
+            401: "Your session has expired. Please log in again.",
+            409: "Book already exists."
+        }
+    )
+
+    if response is None:
         return
 
-    try:
-        data = response.json()
-    except requests.exceptions.JSONDecodeError:
-        print("Error:", response.status_code)
-        return
-    if response.status_code == 201:
-        print("Book added!")
-        if publication_year is not None:
-            success_message = f"{title} by {author_name} from {publication_year} with id: {data['book_id']}"
-        else:
-            success_message = f"{title} by {author_name} with id: {data['book_id']}"
-        print(success_message)
-    elif response.status_code == 409:
-        print("Book already exists")
-    elif response.status_code == 422:
-        print("Please check title and author")
+    print("Book added!")
+
+    if publication_year is not None:
+        success_message = (
+            f"{title} by {author_name} from {publication_year} "
+            f"with ID: {response['book_id']}"
+        )
     else:
-        print("Error:", response.status_code, data["detail"])
+        success_message = (
+            f"{title} by {author_name} "
+            f"with ID: {response['book_id']}"
+        )
+
+    print(success_message)
 
 
 def search_open_library():
@@ -174,131 +172,136 @@ def choose_book(books):
         print(f"Please choose 1 to {len(books)}.")
 
 
+
 def import_book(headers):
     """Search Open Library, pick a book and import it."""
+
     print("\n--- Import from Open Library ---")
+
     books = search_open_library()
+
     if not books:
         return
+
     book = choose_book(books)
+
     if book is None:
         print("Import cancelled.")
         return
 
-    try:
-        response = requests.post(
-            f"{BASE_URL}/books/import",
-            json=book,
-            headers=headers,
-            timeout=5,
-        )
-    except requests.exceptions.ConnectionError:
-        print(STATUS_MESSAGES["connection"])
-        return
-    except requests.exceptions.Timeout:
-        print(STATUS_MESSAGES["timeout"])
+    response = post_json(
+        f"{BASE_URL}/books/import",
+        params=book,
+        headers=headers,
+        timeout=5,
+        status_messages={
+            401: "Your session has expired. Please log in again.",
+            409: "This book is already in the library."
+        }
+    )
+
+    if response is None:
         return
 
-    if response.status_code == 201:
-        data = response.json()
-        print(f"Imported! '{data['title']}' has book_id {data['book_id']}")
-    elif response.status_code == 409:
-        print("This book is already in the library.")
-    elif response.status_code == 401:
-        print(STATUS_MESSAGES[401])
-    else:
-        print("Error:", response.status_code)
-
+    print(
+        f"Imported! '{response['title']}' "
+        f"has book_id {response['book_id']}"
+    )
 
 def delete_book(headers):
     """Delete a book using book_id."""
+
     print("\n--- Delete book ---")
+
     book_id = ask_book_id()
-    book = get_json(f"{BASE_URL}/books/{book_id}")
+
+    book = get_json(
+        f"{BASE_URL}/books/{book_id}"
+    )
+
     if book is None:
         return
-    confirm = input(f"Delete {book['title']}? y/n ").strip().lower()
+
+    confirm = input(
+        f"Delete {book['title']}? y/n: "
+    ).strip().lower()
+
     if confirm != "y":
         print("Cancelled")
         return
 
-    try:
-        response = requests.delete(
-            f"{BASE_URL}/books/{book_id}",
-            headers=headers,
-            timeout=5,
-        )
+    response = delete_request(
+        f"{BASE_URL}/books/{book_id}",
+        headers=headers,
+        timeout=5,
+        status_messages={
+            401: "Your session has expired. Please log in again.",
+            404: "Book can't be found.",
+            409: "Book has loans and cannot be deleted."
+        }
+    )
 
-    except requests.exceptions.ConnectionError:
-        print(STATUS_MESSAGES["connection"])
+    if response is None:
         return
-    except requests.exceptions.Timeout:
-        print(STATUS_MESSAGES["timeout"])
 
-        return
-    if response.status_code == 204:
-        print("Book deleted")
-    elif response.status_code == 404:
-        print("Book can't be found")
-    elif response.status_code == 409:
-        print("Book has loans and cannot be deleted")
-    else:
-        print("Error:", response.status_code)
+    print("Book deleted successfully!")
+
+
 
 
 def update_book(headers):
     """Update a book using book_id."""
+
     print("\n--- Update book ---")
 
     book_id = ask_book_id()
-    book = get_json(f"{BASE_URL}/books/{book_id}")
+
+    book = get_json(
+        f"{BASE_URL}/books/{book_id}",
+        headers=headers
+    )
+
     if book is None:
         return
+
     print(BOOK_INFO.format_map(book))
+
     book_updates = {}
+
     title = input("New title (Enter to keep): ").strip()
-    if title != "":
+    if title:
         book_updates["title"] = title
-    author = input("New Author name (Enter to keep): ").strip()
-    if author != "":
+
+    author = input("New author name (Enter to keep): ").strip()
+    if author:
         book_updates["author_name"] = author
+
     publication_year = ask_year()
     if publication_year is not None:
         book_updates["publication_year"] = publication_year
+
     if not book_updates:
-        print("No changes made")
+        print("No changes made.")
         return
 
-    try:
-        response = requests.patch(
-            f"{BASE_URL}/books/update/{book_id}",
-            json=book_updates,
-            headers=headers,
-            timeout=5,
-        )
-    except requests.exceptions.ConnectionError:
-        print(STATUS_MESSAGES["connection"])
-        return
-    except requests.exceptions.Timeout:
-        print(STATUS_MESSAGES["timeout"])
+    response = patch_json(
+        f"{BASE_URL}/books/update/{book_id}",
+        params=book_updates,
+        headers=headers,
+        timeout=5,
+        status_messages={
+            401: "Your session has expired. Please log in again.",
+            404: "Book not found.",
+            409: "Could not update the book (data conflict)."
+        }
+    )
+
+    if response is None:
         return
 
-    try:
-        data = response.json()
-    except requests.exceptions.JSONDecodeError:
-        print("Error:", response.status_code)
-        return
-    if response.status_code == 200:
-        print("Book updated!")
-        print(BOOK_INFO.format_map(data))
-    elif response.status_code == 409:
-        print("Could not update the book (data conflict)")
-    elif response.status_code == 422:
-        print("Please check input")
-    elif response.status_code == 401:
-        print(STATUS_MESSAGES[401])
-    else:
-        print("Error:", response.status_code, data["detail"])
+    print("Book updated!")
+    print(BOOK_INFO.format_map(response))
+
 
 
 def show_my_info(headers):
@@ -312,48 +315,53 @@ def show_my_info(headers):
     print(MEMBER_INFO.format_map(profile))
 
 
+
 def update_my_contact(headers):
     """Update the logged-in member's email and phone."""
+
     print("\n--- Update my contact info ---")
 
-    member_info = get_json(f"{BASE_URL}/members/me", headers=headers)
+    member_info = get_json(
+        f"{BASE_URL}/members/me",
+        headers=headers
+    )
+
     if member_info is None:
         return
+
     profile = member_info["profile"]
-    email = input(f"New email ({profile['email']}): ").strip() or profile["email"]
-    phone = (
-        input(f"New phone number ({profile['phone']}): ").strip() or profile["phone"]
+
+    email = (
+        input(f"New email ({profile['email']}): ").strip()
+        or profile["email"]
     )
-    try:
-        response = requests.patch(
-            f"{BASE_URL}/members/update_contact/{profile['member_id']}",
-            json={"email": email, "phone": phone},
-            headers=headers,
-            timeout=5,
-        )
-    except requests.exceptions.ConnectionError:
-        print(STATUS_MESSAGES["connection"])
-        return
-    except requests.exceptions.Timeout:
-        print(STATUS_MESSAGES["timeout"])
+
+    phone = (
+        input(f"New phone number ({profile['phone']}): ").strip()
+        or profile["phone"]
+    )
+
+    response = patch_json(
+        f"{BASE_URL}/members/update_contact/{profile['member_id']}",
+        params={
+            "email": email,
+            "phone": phone
+        },
+        headers=headers,
+        timeout=5,
+        status_messages={
+            401: "Your session has expired. Please log in again.",
+            404: "Member not found.",
+            409: "Could not update email. Email already exists."
+        }
+    )
+
+    if response is None:
         return
 
-    try:
-        data = response.json()
-    except requests.exceptions.JSONDecodeError:
-        print("Error:", response.status_code)
-        return
-    if response.status_code == 200:
-        print("Contact updated!")
-        print(MEMBER_INFO.format_map(data))
-    elif response.status_code == 409:
-        print("Could not update email (data conflict)")
-    elif response.status_code == 422:
-        print("Please check input")
-    elif response.status_code == 401:
-        print(STATUS_MESSAGES[401])
-    else:
-        print("Error:", response.status_code, data["detail"])
+    print("Contact updated!")
+    print(MEMBER_INFO.format_map(response))
+
 
 
 def show_overdue_loans(headers):
@@ -434,84 +442,63 @@ def show_my_current_loans(headers):
         )
 
 
+
 def borrow_book(headers):
     """Borrow a book using its book_id."""
 
-    print("Borrow a book")
+    print("\n--- Borrow a book ---")
+
     book_id = ask_book_id()
 
-    confirm = input(f"Borrow book with ID {book_id}? y/n: ").strip().lower()
+    confirm = input(
+        f"Borrow book with ID {book_id}? y/n: "
+    ).strip().lower()
+
     if confirm != "y":
         print("Cancelled")
         return
 
-    try:
-        response = requests.post(
-            f"{BASE_URL}/loans",
-            json={"book_id": book_id},
-            headers=headers,
-            timeout=5,
-        )
-    except requests.exceptions.ConnectionError:
-        print("Cannot reach the server. Is the API running?")
-        return
-    except requests.exceptions.Timeout:
-        print("The server is too slow to answer. Try again later.")
+    response = post_json(
+        f"{BASE_URL}/loans",
+        params={"book_id": book_id},
+        headers=headers,
+        timeout=5,
+        status_messages={
+            401: "Not logged in or your session has expired.",
+            404: "Book not found.",
+            409: "This book is already on loan."
+        }
+    )
+
+    if response is None:
         return
 
-    try:
-        data = response.json()
-    except requests.exceptions.JSONDecodeError:
-        print("Error:", response.status_code)
-        return
+    print("Book borrowed successfully!")
+    print(f"Loan ID: {response['loan_id']}")
 
-    if response.status_code == 201:
-        print("Book borrowed!")
-        print(f"Loan ID: {data['loan_id']}")
-    elif response.status_code == 404:
-        print("Book not found")
-    elif response.status_code == 409:
-        print("This book is already on loan")
-    elif response.status_code == 401:
-        print("Not logged in, the API key is invalid, or your session has expired.")
-    elif response.status_code == 422:
-        print("Please enter a valid positive book ID")
-    else:
-        print(
-            "Error:",
-            response.status_code,
-            data.get("detail", "Unknown error"),
-        )
 
 
 def return_book(headers):
     """Return a borrowed book using loan_id."""
     print("\n--- Return a book ---")
-
     loan_id = ask_loan_id()
-    try:
-        response = requests.put(
-            f"{BASE_URL}/loans/{loan_id}/return",
-            headers=headers,
-            timeout=5,
-        )
-    except requests.exceptions.ConnectionError:
-        print(STATUS_MESSAGES["connection"])
-        return
-    except requests.exceptions.Timeout:
-        print(STATUS_MESSAGES["timeout"])
+
+    response = put_json(
+        f"{BASE_URL}/loans/{loan_id}/return",
+        headers=headers,
+        timeout=5,
+        status_messages={
+            401: "You are not authorized. Please log in again.",
+            404: "Loan not found.",
+            409: "This book is already returned."
+        }
+    )
+
+    if response is None:
         return
 
-    if response.status_code == 200:
-        print(f"Book returned! (loan_id {loan_id})")
-    elif response.status_code == 404:
-        print("Loan not found.")
-    elif response.status_code == 409:
-        print("This book is already returned.")
-    elif response.status_code == 401:
-        print(STATUS_MESSAGES[401])
-    else:
-        print("Error:", response.status_code)
+    print(f"Book returned successfully! (loan_id {loan_id})")
+
 
 
 def show_members(headers):

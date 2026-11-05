@@ -1,4 +1,4 @@
-import requests
+from api_client import get_json
 from models import ExternalBook
 
 OPEN_LIBRARY_URL = "https://openlibrary.org/search.json"
@@ -16,22 +16,14 @@ def search_books(query):
         "limit": 5,
         "fields": "title,author_name,first_publish_year"
     }
-    try:
-        response = requests.get(OPEN_LIBRARY_URL, params=params, timeout=5)
-        response.raise_for_status()
-    except requests.exceptions.Timeout:
-        print("Open Library took too long. Try again later.")
-        return None
-    except requests.exceptions.ConnectionError:
-        print("Could not connect to Open Library. Check your Internet.")
-        return None
-    except requests.exceptions.HTTPError:
-        print("Open Library had a problem. Try again later.")
-        return None
-    data = response.json()
+    
+    response = get_json(OPEN_LIBRARY_URL, params=params, timeout=5)
 
+    if response is None:
+            return None
+    
     books = []
-    for item in data["docs"]:
+    for item in response["docs"]:
         book = ExternalBook( 
             title=item["title"], 
             #This handles both a missing field and a None value.
