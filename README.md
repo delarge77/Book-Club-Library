@@ -79,6 +79,11 @@ The SQLite database contains five tables:
 
 The database enforces foreign keys, positive publication years when supplied, valid loan-date order, and a unique partial index that prevents two active loans for the same book.
 
+## ER Diagram
+
+[![Book Club Library ER diagram](docs/library_ER_Diagram.png)](docs/library_ER_Diagram.png)
+
+
 ## Installation
 
 ### 1. Clone the repository
