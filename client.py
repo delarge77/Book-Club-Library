@@ -30,10 +30,10 @@ def register():
     response = post_json(f"{BASE_URL}/members/register",
                            {"name":name,"email":email,"phone":phone,"password":password},
                            {"X-API-Key": API_KEY},
-                           5
+                           5,
+                           status_messages={409: "Email already exists."}
                         )
         
-    # Stop if registration failed
     if response is None:
         print("Registration failed. Please try again.")
         return
@@ -53,7 +53,8 @@ def login():
         f"{BASE_URL}/members/login",
         {"email": email, "password": password},
         {"X-API-Key": API_KEY},
-        5
+        5,
+        status_messages={401: "Invalid email or password."}
     )
 
     if response is None:
