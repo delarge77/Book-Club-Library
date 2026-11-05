@@ -33,6 +33,10 @@ def register():
                            5
                         )
         
+    # Stop if registration failed
+    if response is None:
+        print("Registration failed. Please try again.")
+        return
     
     print("Registration successful")
     print(f"Welcome {response['name']}! Your member id is {response['member_id']}")

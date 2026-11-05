@@ -71,6 +71,7 @@ def post_json(url, params=None, headers=None, timeout=5):
 
 def show_errors(data):
     """Print validation errors (422) as short readable messages."""
+    print("Please fix:")
     for error in data["detail"]:
         field = error["loc"][-1]
         message = FRIENDLY_MESSAGES.get(field, error["msg"])
