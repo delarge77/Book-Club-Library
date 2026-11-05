@@ -31,8 +31,12 @@
 - **Alessandro:** Yesterday: PUT for loans (#95). Today: anonymous user (#98). Blockers: none.
 - **Christian:** Yesterday: loan_date default (#94). Today: my profile lists loans (#97), import from Open Library search (#99), requirements.txt (#106). Blockers: none.
 ## 2026-11-04 (Wed)
-- **Marcus:** Yesterday: client books menu (#104, #107). Today: member info, update contact, most borrowed in client (#103), Scrum notes. Blockers: none.
-- **Krithika:** Yesterday: API key on write routes (#100), client import (#108). Today: ?. Blockers: ?
-- **Alessandro:** Yesterday: anonymous user (#98). Today: ?. Blockers: ?
-- **Christian:** Yesterday: profile loans, import, requirements (#97, #99, #106). Today: ER diagram in docs. Blockers: ?
- 
+- **Marcus:** Yesterday: client books menu (#104, #107). Today: member info, update contact, most borrowed (#110), consistent client output (#118), my current loans (#121), list + search members (#123), Scrum notes (#111). Blockers: none.
+- **Krithika:** Yesterday: API key on write routes (#100), client import (#108). Today: return a book in the client (#119), helped get borrow a book ready (merged main into #120), reviews. Blockers: none.
+- **Alessandro:** Yesterday: anonymous user (#98). Today: reviews. Blockers: none.
+- **Christian:** Yesterday: profile loans, import, requirements (#97, #99, #106). Today: ER diagram (#109), borrow a book in the client (#120), overdue + never-borrowed in the client (#122). Blockers: none.
+## 2026-11-05 (Thu, feature freeze 12:00, Sprint Review 2 + Retro 2 in the afternoon)
+- **Marcus:** Yesterday: client options 6-8, 12, 15-16, consistent output (#110, #118, #121, #123). Today: update the docs (daily notes, sprint 2 review + retro). Blockers: none.
+- **Krithika:** Yesterday: return a book in the client (#119), helped with borrow (#120), reviews. Today: prepare and create reflection.md. Blockers: none.
+- **Alessandro:** Yesterday: reviews. Today: refactoring. Blockers: none.
+- **Christian:** Yesterday: borrow, overdue + never-borrowed in the client, ER diagram (#109, #120, #122). Today: update documentation. Blockers: none.

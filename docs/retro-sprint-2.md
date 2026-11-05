@@ -6,8 +6,11 @@
 - Product Owner: Krithika
 - Scrum Master: Marcus
 - Developers: Marcus, Krithika, Alessandro, Christian
+## Product Goal
+To help 'Book Club Library' volunteers manage books, members, and loans efficiently while reducing manual work by importing external data.
+ 
 ## Sprint Goal
-?
+Volunteers can manage books from a terminal menu, import books from Open Library, and every route that changes data is protected with an API key.
  
 ## Increment: what was merged to main
  

@@ -6,6 +6,9 @@
 - Product Owner: Christian
 - Scrum Master: Alessandro
 - Developers: Marcus, Krithika, Alessandro, Christian
+## Product Goal
+To help 'Book Club Library' volunteers manage books, members, and loans efficiently while reducing manual work by importing external data.
+ 
 ## Sprint Goal
 ?  <!-- the one sentence you wrote at Sprint Planning 1 on 26 Oct -->
  
